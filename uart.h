@@ -36,6 +36,6 @@ void putsUart1(char* str);
 char getcUart0();
 char getcUart1();
 bool kbhitUart0();
-bool isDataAvailableUart1();
+bool isDataAvailable();
 
 #endif

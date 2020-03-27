@@ -16,6 +16,7 @@
 #include "uart.h"
 #include "gpio.h"
 #include "table.h"
+#include "rs485.h"
 #include "timers.h"
 //#include "reboot.h"
 
@@ -48,11 +49,11 @@ int main(void)
     initHw();
     initUart0();
     initUart1();
-//    initTimers();
 //    initWatchdog();
 
     // Declare Variables
     USER_DATA userInput;
+    uint8_t   data[MAX_PACKET_SIZE];
 
     // Setup UART0 Baud Rate
     setUart0BaudRate(115200, 40e6);
@@ -84,13 +85,24 @@ int main(void)
             parseFields(&userInput);
         }
 
-
         // Packet processing
-        if(isDataAvailableUart1())
+        if(isDataAvailable())
         {
 
             // Get packet
-            uartGetPacket();
+            getPacket(data, DATA_MAX_SIZE);
+
+            if (packetIsUnicast(data)) // Process Unicast Packets
+            {
+                if(ackIsRequired(data))
+                {
+
+                }
+            }
+            else // Process Broadcast Packets
+            {
+
+            }
         }
 
         if(userInput.endOfString && isCommand(&userInput, "reset", 2))

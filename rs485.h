@@ -14,9 +14,14 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include "tm4c123gh6pm.h"
+#include "table.h"
+#include "uart.h"
+
+#define MAX_PACKET_SIZE 263
 
 extern bool carrierSenseFlag;
-
-
+bool packetIsUnicast(uint8_t packet[]);
+bool ackIsRequired(uint8_t packet[]);
+void getPacket(uint8_t packet[], uint16_t maxSize);
 
 #endif /* RS485_H_ */

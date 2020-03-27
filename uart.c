@@ -155,7 +155,7 @@ bool kbhitUart0()
 }
 
 // Returns the status of the receive buffer
-bool isDataAvailableUart1()
+bool isDataAvailable()
 {
-    return !(UART0_FR_R & UART_FR_RXFE);
+    return !(UART1_FR_R & UART_FR_RXFE);
 }

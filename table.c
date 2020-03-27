@@ -7,7 +7,7 @@
 
 #include "table.h"
 
-
+#packetFrame info = {0};
 pendingTable table = {0};
 bool ackFlagSet = false;
 
