@@ -26,10 +26,16 @@
 //-----------------------------------------------------------------------------
 
 void initUart0();
+void initUart1();
 void setUart0BaudRate(uint32_t baudRate, uint32_t fcyc);
+void setUart1BaudRate(uint32_t baudRate, uint32_t fcyc);
 void putcUart0(char c);
+void putcUart1(char c);
 void putsUart0(char* str);
+void putsUart1(char* str);
 char getcUart0();
+char getcUart1();
 bool kbhitUart0();
+bool isDataAvailableUart1();
 
 #endif

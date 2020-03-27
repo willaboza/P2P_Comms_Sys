@@ -9,13 +9,15 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <reboot.h>
 #include "tm4c123gh6pm.h"
 #include "terminal.h"
+#include "wait.h"
 #include "uart.h"
 #include "gpio.h"
+#include "table.h"
 #include "timers.h"
-#include "reboot.h"
-#include "wait.h"
+//#include "reboot.h"
 
 // Pins
 #define RED_LED PORTF,     1
@@ -45,7 +47,8 @@ int main(void)
     // Initialize Hardware
     initHw();
     initUart0();
-//    initWideTimers();
+    initUart1();
+//    initTimers();
 //    initWatchdog();
 
     // Declare Variables
@@ -53,6 +56,9 @@ int main(void)
 
     // Setup UART0 Baud Rate
     setUart0BaudRate(115200, 40e6);
+
+    // Setup UART1 Baud Rate
+    setUart1BaudRate(115200, 40e6);
 
     // Flash LED
     setPinValue(GREEN_LED, 1);
@@ -78,70 +84,119 @@ int main(void)
             parseFields(&userInput);
         }
 
-        if(userInput.endOfString && isCommand(&userInput, "dhcp", 2))
+
+        // Packet processing
+        if(isDataAvailableUart1())
+        {
+
+            // Get packet
+            uartGetPacket();
+        }
+
+        if(userInput.endOfString && isCommand(&userInput, "reset", 2))
         {
             char *token;
 
-            token = getFieldString(&userInput, 1); // Retrieve DHCP command from user
+            token = getFieldString(&userInput, 1);
 
-            if(strcmp(token, "on") == 0)           // Enables DHCP mode and stores the mode persistently in EEPROM
+            if(strcmp(token, "A") == 0)
             {
-                putsUart0("dhcp ON Function.\r\n");
-            }
-            else if(strcmp(token, "off") == 0)     // Disables DHCP mode and stores the mode persistently in EEPROM
-            {
-                putsUart0("dhcp OFF Function.\r\n");
-            }
-            else if(strcmp(token, "refresh") == 0) // Refresh Current IP address (if in DHCP mode)
-            {
-                putsUart0("dhcp REFRESH Function.\r\n");
-            }
-            else if(strcmp(token, "release") == 0) // Release Current IP address (if in DHCP mode)
-            {
-                putsUart0("dhcp RELEASE Function.\r\n");
+                putsUart0("Reset sent to address A\r\n");
             }
 
             resetUserInput(&userInput);
         }
-        else if(userInput.endOfString && isCommand(&userInput, "set", 3))
+        else if(userInput.endOfString && isCommand(&userInput, "cs", 2))
         {
-            char    token[MAX_CHARS + 1];
-            char    address[MAX_CHARS + 1];
+            char *token;
 
-            strcpy(token,getFieldString(&userInput, 1));   // Retrieve network configuration parameter
+            token = getFieldString(&userInput, 1);
 
-            strcpy(address,getFieldString(&userInput, 2)); // Retrieve network parameter address
-
-            if(strcmp(token, "ip") == 0)                   // Set Internet Protocol address
+            if(strcmp(token, "on") == 0)
             {
-                putsUart0("set IP Function.\r\n");
+                putsUart0("Carrier Sense Detection Enabled\r\n");
             }
-            else if(strcmp(token, "gw") == 0)        // Set Gateway address
+            else if(strcmp(token, "off") == 0)
             {
-                putsUart0("set GW Function.\r\n");
-            }
-            else if(strcmp(token, "dns") == 0)       // Set Domain Name System address
-            {
-                putsUart0("set DNS Function.\r\n");
-            }
-            else if(strcmp(token, "sn") == 0)        // Set Sub-net Mask
-            {
-                putsUart0("set SN Function.\r\n");
+                putsUart0("Carrier Sense Detection Disabled\r\n");
             }
 
             resetUserInput(&userInput);
         }
-        else if(userInput.endOfString && isCommand(&userInput, "ifconfig", 1))
+        else if(userInput.endOfString && isCommand(&userInput, "random", 2))
         {
-            userInput.fieldCount = 0;
-            putsUart0("ifconfig Function.\r\n");
+            char *token;
 
+            token = getFieldString(&userInput, 1);
+
+            if(strcmp(token, "on") == 0)
+            {
+                putsUart0("Random Retransmission Enabled\r\n");
+            }
+            else if(strcmp(token, "off") == 0)
+            {
+                putsUart0("Random Retransmission Disabled\r\n");
+            }
+            resetUserInput(&userInput);
+        }
+        else if(userInput.endOfString && isCommand(&userInput, "set", 4))
+        {
+            char token[MAX_CHARS + 1];
+            uint8_t address, channel, value;
+
+            // Retrieve network configuration parameter
+            strcpy(token,getFieldString(&userInput, 1));
+
+            // Get Network Address
+            address = getFieldInteger(&userInput, 2);
+            channel = getFieldInteger(&userInput, 3);
+            value   = getFieldInteger(&userInput, 4);
+
+            setACV(address, channel, value);
+
+            resetUserInput(&userInput);
+        }
+        else if(userInput.endOfString && isCommand(&userInput, "get", 3))
+        {
+            resetUserInput(&userInput);
+        }
+        else if(userInput.endOfString && isCommand(&userInput, "poll", 1))
+        {
+            resetUserInput(&userInput);
+        }
+        else if(userInput.endOfString && isCommand(&userInput, "sa", 3))
+        {
+            resetUserInput(&userInput);
+        }
+        else if(userInput.endOfString && isCommand(&userInput, "ack", 2))
+        {
+            char *token;
+
+            token = getFieldString(&userInput, 1);
+
+            if(strcmp(token, "on") == 0)
+            {
+                ackFlagSet = true;
+                putsUart0("ACK Enabled\r\n");
+            }
+            else if(strcmp(token, "off") == 0)
+            {
+                ackFlagSet = false;
+                putsUart0("ACK Disabled\r\n");
+            }
+
+            resetUserInput(&userInput);
+        }
+        else if(userInput.endOfString && isCommand(&userInput, "print", 1))
+        {
+
+            displayTableContents();
             resetUserInput(&userInput);
         }
         else if(userInput.endOfString && isCommand(&userInput, "reboot", 1))
         {
             putsUart0("Rebooting System...\r\n");
-            rebootFlag = true;
+            //rebootFlag = true;
         }
         else if(userInput.endOfString)
         {

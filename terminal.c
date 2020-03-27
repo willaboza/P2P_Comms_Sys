@@ -162,9 +162,14 @@ void resetUserInput(USER_DATA* data)
 void printMainMenu()
 {
     putsUart0("Commands:\r\n");
-    putsUart0("  dhcp ON|OFF|REFRESH|RELEASE\r\n");
-    putsUart0("  set IP|GW|DNS|SN w.x.y.z\r\n");
-    putsUart0("  ifconfig\r\n");
-    putsUart0("  reboot\r\n");
+    putsUart0("  reset A\r\n");
+    putsUart0("  cs ON|OFF\r\n");
+    putsUart0("  random ON|OFF\r\n");
+    putsUart0("  set A C V\r\n");
+    putsUart0("  get A C\r\n");
+    putsUart0("  poll\r\n");
+    putsUart0("  sa A Anew\r\n");
+    putsUart0("  ack on\r\n");
+    putsUart0("  ack off\r\n");
     putsUart0("\r\n");
 }

@@ -18,10 +18,6 @@
 
 #define NUM_TIMERS 10
 
-extern bool renewRequest;
-extern bool rebindRequest;
-extern bool releaseRequest;
-
 typedef void(*_callback)(void);
 _callback fn[NUM_TIMERS];
 
