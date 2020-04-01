@@ -9,22 +9,15 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <ctype.h>
-#include <reboot.h>
 #include "tm4c123gh6pm.h"
+#include "uart0.h"
+#include "uart1.h"
+#include "reboot.h"
 #include "terminal.h"
 #include "wait.h"
-#include "uart.h"
 #include "gpio.h"
-#include "table.h"
 #include "rs485.h"
 #include "timers.h"
-//#include "reboot.h"
-
-// Pins
-#define RED_LED PORTF,     1
-#define BLUE_LED PORTF,    2
-#define GREEN_LED PORTF,   3
-#define PUSH_BUTTON PORTF, 4
 
 // Function to Initialize Hardware
 void initHw()
@@ -49,6 +42,7 @@ int main(void)
     initHw();
     initUart0();
     initUart1();
+    initTimer();
 //    initWatchdog();
 
     // Declare Variables
@@ -59,7 +53,7 @@ int main(void)
     setUart0BaudRate(115200, 40e6);
 
     // Setup UART1 Baud Rate
-    setUart1BaudRate(115200, 40e6);
+    setUart1BaudRate(38400, 40e6);
 
     // Flash LED
     setPinValue(GREEN_LED, 1);
@@ -67,10 +61,13 @@ int main(void)
     setPinValue(GREEN_LED, 0);
     waitMicrosecond(100000);
 
+    srand(SOURCE_ADDRESS);
+
     // Set Variables for User Input to Initial Condition
     resetUserInput(&userInput);
 
     // Display Main Menu
+    putsUart0("\r\n");
     printMainMenu();
 
     while(true)
@@ -84,7 +81,7 @@ int main(void)
             // Tokenize User Input
             parseFields(&userInput);
         }
-
+        /*
         // Packet processing
         if(isDataAvailable())
         {
@@ -92,11 +89,67 @@ int main(void)
             // Get packet
             getPacket(data, DATA_MAX_SIZE);
 
+            if(ackIsRequired(data))
+            {
+
+            }
+
             if (packetIsUnicast(data)) // Process Unicast Packets
             {
-                if(ackIsRequired(data))
-                {
+                uint8_t command;
 
+                command = (info.ackCmd & 0x7F); // Mask Bits
+
+                switch(command)
+                {
+                    case 0x00: putsUart0("  Set\r\n");
+                               break;
+                    case 0x01: putsUart0("  Piecewise\r\n");
+                               break;
+                    case 0x02: putsUart0("  Pulse\r\n");
+                               break;
+                    case 0x03: putsUart0("  Square\r\n");
+                               break;
+                    case 0x04: putsUart0("  Sawtooth\r\n");
+                               break;
+                    case 0x05: putsUart0("  Triangle\r\n");
+                               break;
+                    case 0x20: putsUart0("  Pulse\r\n");
+                               break;
+                    case 0x21: putsUart0("  Data Request\r\n");
+                               break;
+                    case 0x22: putsUart0("  Report Control\r\n");
+                               break;
+                    case 0x40: putsUart0("  LCD Display Text\r\n");
+                               break;
+                    case 0x48: putsUart0("  RGB\r\n");
+                               break;
+                    case 0x49: putsUart0("  RGB Piecewise\r\n");
+                               break;
+                    case 0x50: putsUart0("  UART Data\r\n");
+                               break;
+                    case 0x51: putsUart0("  UART Data\r\n");
+                               break;
+                    case 0x52: putsUart0("  UART Control\r\n");
+                               break;
+                    case 0x54: putsUart0("  Acknowledge\r\n");
+                               break;
+                    case 0x70: putsUart0("  Poll Request\r\n");
+                               break;
+                    case 0x78: putsUart0("  Poll Response\r\n");
+                               break;
+                    case 0x79: putsUart0("  Set Address\r\n");
+                               break;
+                    case 0x7A: putsUart0("  Acknowledge\r\n");
+                               break;
+                    case 0x7D: putsUart0("  Poll Request\r\n");
+                               break;
+                    case 0x7E: putsUart0("  Poll Response\r\n");
+                               break;
+                    case 0x7F: putsUart0("  Set Address\r\n");
+                               break;
+                    default:   putsUart0("  Command Not Recognized\r\n");
+                               break;
                 }
             }
             else // Process Broadcast Packets
@@ -104,7 +157,7 @@ int main(void)
 
             }
         }
-
+        */
         if(userInput.endOfString && isCommand(&userInput, "reset", 2))
         {
             char *token;
@@ -139,45 +192,59 @@ int main(void)
         {
             char *token;
 
-            token = getFieldString(&userInput, 1);
+            strcpy(token,getFieldString(&userInput, 1));
 
             if(strcmp(token, "on") == 0)
             {
-                putsUart0("Random Retransmission Enabled\r\n");
+                // Seed Random Function with Unique Address
+                // srand(SOURCE_ADDRESS);
+                randomFlag = true;
             }
             else if(strcmp(token, "off") == 0)
             {
-                putsUart0("Random Retransmission Disabled\r\n");
+                randomFlag = false;
             }
             resetUserInput(&userInput);
         }
         else if(userInput.endOfString && isCommand(&userInput, "set", 4))
         {
-            char token[MAX_CHARS + 1];
-            uint8_t address, channel, value;
+            char token[DATA_MAX_SIZE];
+            uint8_t address, channel;
 
-            // Retrieve network configuration parameter
-            strcpy(token,getFieldString(&userInput, 1));
+            // Get Address, Channel, and Data to be Transmitted
+            address = getFieldInteger(&userInput, 1);
+            channel = getFieldInteger(&userInput, 2);
+            strcpy(token,getFieldString(&userInput, 3));
 
-            // Get Network Address
-            address = getFieldInteger(&userInput, 2);
-            channel = getFieldInteger(&userInput, 3);
-            value   = getFieldInteger(&userInput, 4);
-
-            setACV(address, channel, value);
+            setACV(address, channel, token);
 
             resetUserInput(&userInput);
         }
         else if(userInput.endOfString && isCommand(&userInput, "get", 3))
         {
+            uint8_t address, channel;
+
+            address = getFieldInteger(&userInput, 1);
+            channel = getFieldInteger(&userInput, 2);
+            getAC(address, channel);
+
+            putsUart0("  get A C\r\n");
             resetUserInput(&userInput);
         }
         else if(userInput.endOfString && isCommand(&userInput, "poll", 1))
         {
+            poll();
             resetUserInput(&userInput);
         }
         else if(userInput.endOfString && isCommand(&userInput, "sa", 3))
         {
+            uint8_t oldAddress, newAddress;
+
+            oldAddress = getFieldInteger(&userInput, 1);
+            newAddress = getFieldInteger(&userInput, 2);
+            setNewAddress(oldAddress, newAddress);
+
+            putsUart0("  sa A Anew\r\n");
             resetUserInput(&userInput);
         }
         else if(userInput.endOfString && isCommand(&userInput, "ack", 2))
@@ -188,21 +255,25 @@ int main(void)
 
             if(strcmp(token, "on") == 0)
             {
+                BACKOFF_ATTEMPTS = 4; // Set to 4 for ACK ON
                 ackFlagSet = true;
-                putsUart0("ACK Enabled\r\n");
+                putsUart0("  ACK Enabled\r\n");
             }
             else if(strcmp(token, "off") == 0)
             {
+                BACKOFF_ATTEMPTS = 1; // Set to 1 for ACK OFF
                 ackFlagSet = false;
-                putsUart0("ACK Disabled\r\n");
+                putsUart0("  ACK Disabled\r\n");
             }
 
             resetUserInput(&userInput);
         }
         else if(userInput.endOfString && isCommand(&userInput, "print", 1))
         {
-
             displayTableContents();
+
+            putsUart0("  pending table\r\n");
+
             resetUserInput(&userInput);
         }
         else if(userInput.endOfString && isCommand(&userInput, "reboot", 1))

@@ -8,7 +8,7 @@
 #include "terminal.h"
 
 // Function to get Input from Terminal
-void getsUart0(uint8_t packet[], uint16_t maxSize)
+void getsUart0(USER_DATA* data)
 {
     uint8_t count;
     char    c;

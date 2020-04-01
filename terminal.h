@@ -16,8 +16,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <uart0.h>
 #include "tm4c123gh6pm.h"
-#include "uart.h"
 
 #define MAX_CHARS 80
 #define MAX_FIELDS 5
