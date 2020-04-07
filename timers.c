@@ -18,10 +18,6 @@
 
 #include "timers.h"
 
-bool reload[NUM_TIMERS]     = {0};
-uint32_t period[NUM_TIMERS] = {0};
-uint32_t backoff[NUM_TIMERS]  = {0};
-_callback fn[NUM_TIMERS]    = {0};
 bool TX_FLASH_LED = 0;
 uint32_t TX_FLASH_TIMEOUT = 0;
 
@@ -44,110 +40,9 @@ void initTimer()
 
     for(i = 0; i < NUM_TIMERS; i++)
     {
-        period[i] = 0;
-        backoff[i]  = 0;
-        fn[i]     = 0;
+        fn[i] = 0;
         reload[i] = false;
     }
-}
-
-// Function to Start One Shot Timer
-bool startOneShotTimer(_callback callback, uint32_t seconds)
-{
-    uint8_t i = 0;
-    bool found = false;
-    while(i < NUM_TIMERS && !found)
-    {
-        found = fn[i] == NULL;
-        if (found)
-        {
-            period[i] = seconds;
-            backoff[i] = seconds;
-            fn[i] = callback;
-            reload[i] = false;
-        }
-        i++;
-    }
-    return found;
-}
-
-// Function to Start Periodic Timer
-bool startPeriodicTimer(_callback callback, uint32_t seconds)
-{
-    uint8_t i = 0;
-    bool found = false;
-    while(i < NUM_TIMERS && !found)
-    {
-        found = fn[i] == NULL;
-        if (found)
-        {
-            period[i] = seconds;
-            backoff[i] = seconds;
-            fn[i] = callback;
-            reload[i] = true;
-        }
-        i++;
-    }
-    return found;
-}
-
-// Function stops a timer currently in use
-bool stopTimer(_callback callback)
-{
-    uint8_t i = 0;
-    bool found = false;
-    while(i < NUM_TIMERS && !found)
-    {
-        found = fn[i] == callback;
-        if(found)
-        {
-            period[i]  = 0;
-            backoff[i] = 0;
-            fn[i]      = 0;
-            reload[i]  = false;
-        }
-        i++;
-    }
-    return found;
-}
-
-// Restart Timer Previously Initialized
-bool restartTimer(_callback callback)
-{
-    uint8_t i = 0;
-    bool found = false;
-    while(i < NUM_TIMERS && !found)
-    {
-        found = fn[i] == callback;
-        if(found)
-        {
-            backoff[i] = period[i];
-        }
-        i++;
-    }
-    return found;
-}
-
-// Reset all timers
-void resetAllTimers()
-{
-    uint8_t i;
-    for(i = 0; i < NUM_TIMERS; i++)
-    {
-        period[i]  = 0;
-        backoff[i] = 0;
-        fn[i]      = 0;
-        reload[i]  = false;
-    }
-}
-
-// Reset all timers
-void resetTimer(uint8_t index)
-{
-    period[index]  = 0;
-    backoff[index] = 0;
-    fn[index]      = 0;
-    reload[index]  = false;
 }
 
 // Function to handle Timer Interrupts
@@ -156,35 +51,34 @@ void tickIsr()
     uint8_t i;
     for(i = 0; i < NUM_TIMERS; i++)
     {
-        if(backoff[i] != 0)
+        if(table[i].backoff != 0 && table[i].validBit)
         {
-            backoff[i]--;
-            if((backoff[i] == 0))
+            table[i].backoff--;
+            // If validBit = 1 && backoff = 0 can start to send message
+            if(table[i].backoff == 0)
             {
-                currentTableIndex = i; // "Prime the Pump" here
-                (*fn[i])();
+                char str[50];
+                messageInProgress = i;
+                // "Prime the Pump" here
+                if(UART1_FR_R & UART_FR_TXFE)
+                {
+                    sprintf(str, "  Transmitting Msg %u, Attempt %u\r\n", table[index].seqId, ++table[index].attempts);
+                    putsUart0(str);
+                    UART1_LCRH_R &= ~UART_LCRH_EPS;   // turn-off EPS before Tx dstAdd, sets parity bit = 1
+                    sendPacket(messageInProgress);
+                }
             }
         }
     }
     if(TX_FLASH_TIMEOUT > 0)
      {
          TX_FLASH_TIMEOUT--;
-         if(TX_FLASH_TIMEOUT)
+         if(TX_FLASH_TIMEOUT == 0)
          {
              setPinValue(RED_LED, TX_FLASH_LED = 0); // Turn LED OFF
          }
      }
     TIMER4_ICR_R = TIMER_ICR_TATOCINT;
-}
-
-void backoffTimer()
-{
-    char str[10];
-
-    sprintf(str, "  Transmitting Msg %u, Attempt %u\r\n", table[currentTableIndex].seqId, ++table[currentTableIndex].attempts);
-    putsUart0(str);
-
-    sendPacket(currentTableIndex); // "Prime the Pump" here
 }
 
 // Calculate New BACKOFF_MS for pending table

@@ -131,6 +131,17 @@ void selectPinDigitalInput(PORT port, uint8_t pin)
     *p = 0;
 }
 
+void selectPinDigitalOutput(PORT port, uint8_t pin)
+{
+    uint32_t* p;
+    p = (uint32_t*)port + pin + OFS_DATA_TO_DIR;
+    *p = 0;
+    p = (uint32_t*)port + pin + OFS_DATA_TO_DEN;
+    *p = 1;
+    p = (uint32_t*)port + pin + OFS_DATA_TO_AMSEL;
+    *p = 0;
+}
+
 void selectPinAnalogInput(PORT port, uint8_t pin)
 {
     uint32_t* p;

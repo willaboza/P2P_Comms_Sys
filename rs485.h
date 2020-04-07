@@ -58,7 +58,8 @@ typedef struct _pendingTable
     uint8_t  checksum;
 } pendingTable;
 
-extern packetFrame info;
+extern packetFrame txInfo;
+extern packetFrame rxInfo;
 extern pendingTable table[MAX_TABLE_SIZE];
 extern bool carrierSenseFlag;
 extern bool ackFlagSet;
@@ -66,7 +67,7 @@ extern bool randomFlag;
 extern uint8_t SOURCE_ADDRESS;
 extern uint8_t BACKOFF_ATTEMPTS;
 extern uint8_t lastSequenceId;
-extern uint8_t currentTableIndex;
+extern uint8_t messageInProgress;
 extern uint8_t sum;
 
 bool packetIsUnicast(uint8_t packet[]);
@@ -82,5 +83,6 @@ void displayTableContents();
 void setPacketFrame(uint8_t index);
 uint8_t getChecksum();
 uint8_t findEmptySlot();
+void takeAction();
 
 #endif /* RS485_H_ */

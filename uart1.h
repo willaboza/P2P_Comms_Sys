@@ -20,12 +20,10 @@
 #define UART1_TX PORTB,1
 #define UART1_RX PORTB,0
 
+extern uint16_t rxPhase;
+
 void initUart1();
 void setUart1BaudRate(uint32_t baudRate, uint32_t fcyc);
-void putcUart1(char c);
-void putsUart1(char* str);
-char getcUart1();
-bool isDataAvailable();
 void uart1Isr();
 
 #endif /* UART1_H_ */

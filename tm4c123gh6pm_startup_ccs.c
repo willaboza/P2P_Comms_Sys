@@ -51,8 +51,8 @@ extern uint32_t __STACK_TOP;
 
 //*****************************************************************************
 
-extern void tickIsr();
-extern void uart1Isr();
+extern void tickIsr(void);
+extern void uart1Isr(void);
 
 //*****************************************************************************
 // To be added by user

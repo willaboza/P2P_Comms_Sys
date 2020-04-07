@@ -43,6 +43,7 @@ void disablePort(PORT port);
 void selectPinPushPullOutput(PORT port, uint8_t pin);
 void selectPinOpenDrainOutput(PORT port, uint8_t pin);
 void selectPinDigitalInput(PORT port, uint8_t pin);
+void selectPinDigitalOutput(PORT port, uint8_t pin);
 void selectPinAnalogInput(PORT port, uint8_t pin);
 void setPinCommitControl(PORT port, uint8_t pin);
 

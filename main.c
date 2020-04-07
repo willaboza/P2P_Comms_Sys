@@ -1,5 +1,3 @@
-
-
 /**
  * main.c
  */
@@ -47,7 +45,7 @@ int main(void)
 
     // Declare Variables
     USER_DATA userInput;
-    uint8_t   data[MAX_PACKET_SIZE];
+    uint8_t data[MAX_PACKET_SIZE];
 
     // Setup UART0 Baud Rate
     setUart0BaudRate(115200, 40e6);
@@ -70,6 +68,8 @@ int main(void)
     putsUart0("\r\n");
     printMainMenu();
 
+    setPinValue(DRIVER_ENABLE, 1);  // Set value to 1 before Tx packet
+
     while(true)
     {
         // If User Input detected, then process input
@@ -81,83 +81,8 @@ int main(void)
             // Tokenize User Input
             parseFields(&userInput);
         }
-        /*
-        // Packet processing
-        if(isDataAvailable())
-        {
 
-            // Get packet
-            getPacket(data, DATA_MAX_SIZE);
-
-            if(ackIsRequired(data))
-            {
-
-            }
-
-            if (packetIsUnicast(data)) // Process Unicast Packets
-            {
-                uint8_t command;
-
-                command = (info.ackCmd & 0x7F); // Mask Bits
-
-                switch(command)
-                {
-                    case 0x00: putsUart0("  Set\r\n");
-                               break;
-                    case 0x01: putsUart0("  Piecewise\r\n");
-                               break;
-                    case 0x02: putsUart0("  Pulse\r\n");
-                               break;
-                    case 0x03: putsUart0("  Square\r\n");
-                               break;
-                    case 0x04: putsUart0("  Sawtooth\r\n");
-                               break;
-                    case 0x05: putsUart0("  Triangle\r\n");
-                               break;
-                    case 0x20: putsUart0("  Pulse\r\n");
-                               break;
-                    case 0x21: putsUart0("  Data Request\r\n");
-                               break;
-                    case 0x22: putsUart0("  Report Control\r\n");
-                               break;
-                    case 0x40: putsUart0("  LCD Display Text\r\n");
-                               break;
-                    case 0x48: putsUart0("  RGB\r\n");
-                               break;
-                    case 0x49: putsUart0("  RGB Piecewise\r\n");
-                               break;
-                    case 0x50: putsUart0("  UART Data\r\n");
-                               break;
-                    case 0x51: putsUart0("  UART Data\r\n");
-                               break;
-                    case 0x52: putsUart0("  UART Control\r\n");
-                               break;
-                    case 0x54: putsUart0("  Acknowledge\r\n");
-                               break;
-                    case 0x70: putsUart0("  Poll Request\r\n");
-                               break;
-                    case 0x78: putsUart0("  Poll Response\r\n");
-                               break;
-                    case 0x79: putsUart0("  Set Address\r\n");
-                               break;
-                    case 0x7A: putsUart0("  Acknowledge\r\n");
-                               break;
-                    case 0x7D: putsUart0("  Poll Request\r\n");
-                               break;
-                    case 0x7E: putsUart0("  Poll Response\r\n");
-                               break;
-                    case 0x7F: putsUart0("  Set Address\r\n");
-                               break;
-                    default:   putsUart0("  Command Not Recognized\r\n");
-                               break;
-                }
-            }
-            else // Process Broadcast Packets
-            {
-
-            }
-        }
-        */
+        // Perform Command from User Input
         if(userInput.endOfString && isCommand(&userInput, "reset", 2))
         {
             char *token;
@@ -169,7 +94,7 @@ int main(void)
                 putsUart0("Reset sent to address A\r\n");
             }
 
-            resetUserInput(&userInput);
+            resetUserInput(&userInput); // Reset Input from User to Rx Next Command
         }
         else if(userInput.endOfString && isCommand(&userInput, "cs", 2))
         {

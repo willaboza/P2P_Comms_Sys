@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include "tm4c123gh6pm.h"
 #include "gpio.h"
+#include "timers.h"
 
 // Pins
 #define UART0_TX PORTA,1
