@@ -16,6 +16,7 @@
 #include "gpio.h"
 #include "rs485.h"
 #include "timers.h"
+#include "eeprom.h"
 
 // Function to Initialize Hardware
 void initHw()
@@ -38,6 +39,7 @@ int main(void)
 {
     // Initialize Hardware
     initHw();
+    initEeprom();
     initUart0();
     initUart1();
     initTimer();
@@ -45,7 +47,6 @@ int main(void)
 
     // Declare Variables
     USER_DATA userInput;
-    uint8_t data[MAX_PACKET_SIZE];
 
     // Setup UART0 Baud Rate
     setUart0BaudRate(115200, 40e6);
@@ -59,7 +60,14 @@ int main(void)
     setPinValue(GREEN_LED, 0);
     waitMicrosecond(100000);
 
+    // Get current value for SOURCE_ADDRESS
+    readEepromAddress();
+
+    // Seed random variable with current Source Address
     srand(SOURCE_ADDRESS);
+
+    // Set Sequence ID for Message
+    seqId = (rand() + (uint8_t)random32());
 
     // Set Variables for User Input to Initial Condition
     resetUserInput(&userInput);
@@ -91,7 +99,8 @@ int main(void)
 
             if(strcmp(token, "A") == 0)
             {
-                putsUart0("Reset sent to address A\r\n");
+                putsUart0("  Reset Sent\r\n");
+                sendReset(token);
             }
 
             resetUserInput(&userInput); // Reset Input from User to Rx Next Command
@@ -104,11 +113,11 @@ int main(void)
 
             if(strcmp(token, "on") == 0)
             {
-                putsUart0("Carrier Sense Detection Enabled\r\n");
+                putsUart0("  Carrier Sense Detection Enabled\r\n");
             }
             else if(strcmp(token, "off") == 0)
             {
-                putsUart0("Carrier Sense Detection Disabled\r\n");
+                putsUart0("  Carrier Sense Detection Disabled\r\n");
             }
 
             resetUserInput(&userInput);
@@ -200,11 +209,6 @@ int main(void)
             putsUart0("  pending table\r\n");
 
             resetUserInput(&userInput);
-        }
-        else if(userInput.endOfString && isCommand(&userInput, "reboot", 1))
-        {
-            putsUart0("Rebooting System...\r\n");
-            //rebootFlag = true;
         }
         else if(userInput.endOfString)
         {

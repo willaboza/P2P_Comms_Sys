@@ -24,8 +24,6 @@ uint32_t TX_FLASH_TIMEOUT = 0;
 // Function To Initialize Timers
 void initTimer()
 {
-    uint8_t i;
-
     // Enable clocks
     SYSCTL_RCGCTIMER_R |= SYSCTL_RCGCTIMER_R4;
     _delay_cycles(3);
@@ -37,12 +35,6 @@ void initTimer()
     TIMER4_CTL_R   |= TIMER_CTL_TAEN;
     TIMER4_IMR_R   |= TIMER_IMR_TATOIM;                    // enable interrupts
     NVIC_EN2_R     |= 1 << (INT_TIMER4A-80);               // turn-on interrupt 86 (TIMER4A)
-
-    for(i = 0; i < NUM_TIMERS; i++)
-    {
-        fn[i] = 0;
-        reload[i] = false;
-    }
 }
 
 // Function to handle Timer Interrupts
@@ -62,8 +54,8 @@ void tickIsr()
                 // "Prime the Pump" here
                 if(UART1_FR_R & UART_FR_TXFE)
                 {
-                    sprintf(str, "  Transmitting Msg %u, Attempt %u\r\n", table[index].seqId, ++table[index].attempts);
-                    putsUart0(str);
+                    sprintf(str, "  Transmitting Msg %u, Attempt %u\r\n", table[i].seqId, ++table[i].attempts);
+                    sendUart0String(str);
                     UART1_LCRH_R &= ~UART_LCRH_EPS;   // turn-off EPS before Tx dstAdd, sets parity bit = 1
                     sendPacket(messageInProgress);
                 }

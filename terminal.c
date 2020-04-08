@@ -161,6 +161,19 @@ void resetUserInput(USER_DATA* data)
 // Function to Print Main Menu
 void printMainMenu()
 {
+    sendUart0String("Commands:\r\n");
+    sendUart0String("  reset A\r\n");
+    sendUart0String("  cs ON|OFF\r\n");
+    sendUart0String("  random ON|OFF\r\n");
+    sendUart0String("  set A C V\r\n");
+    sendUart0String("  get A C\r\n");
+    sendUart0String("  poll\r\n");
+    sendUart0String("  sa A Anew\r\n");
+    sendUart0String("  ack on\r\n");
+    sendUart0String("  ack off\r\n");
+    sendUart0String("\r\n");
+
+    /*
     putsUart0("Commands:\r\n");
     putsUart0("  reset A\r\n");
     putsUart0("  cs ON|OFF\r\n");
@@ -172,4 +185,5 @@ void printMainMenu()
     putsUart0("  ack on\r\n");
     putsUart0("  ack off\r\n");
     putsUart0("\r\n");
+    */
 }

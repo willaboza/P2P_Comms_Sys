@@ -33,4 +33,16 @@ uint32_t readEeprom(uint16_t add)
     return EEPROM_EERDWR_R;
 }
 
-
+// Function to Retrieve Current Address for Device
+void readEepromAddress()
+{
+    uint32_t num = 0;
+    if((num = readEeprom(0x0000)) != 0xFFFFFFFF)
+    {
+        SOURCE_ADDRESS = num; // Retrieve Stored Address From EEPROM
+    }
+    else
+    {
+        SOURCE_ADDRESS = 1; // NO Previous Address Stored in EEPROM, default = 1
+    }
+}

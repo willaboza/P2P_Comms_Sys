@@ -51,13 +51,13 @@ void setUart1BaudRate(uint32_t baudRate, uint32_t fcyc)
 // Implement the ISR for UART1
 void uart1Isr()
 {
-    uint8_t tmp8;
-    bool ok = true;
+    uint8_t tmp8, size;
+    // bool ok = true;
 
     // Check to see if UART Tx holding register is empty
     if(UART1_FR_R & UART_FR_TXFE)
     {
-        sendPacket(currentTableIndex); // Transmit next byte of packet
+        sendPacket(messageInProgress); // Transmit next byte of packet
     }
 
     // Check to see if Rx is NOT empty

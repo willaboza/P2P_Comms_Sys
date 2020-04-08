@@ -30,6 +30,11 @@
 // Pins
 #define UART0_TX PORTA,1
 #define UART0_RX PORTA,0
+#define QUEUE_BUFFER_LENGTH 80
+
+extern char uart0String[QUEUE_BUFFER_LENGTH];
+extern uint8_t writeIndex;
+extern uint8_t readIndex;
 
 //-----------------------------------------------------------------------------
 // Subroutines
@@ -41,5 +46,11 @@ void putcUart0(char c);
 void putsUart0(char* str);
 char getcUart0();
 bool kbhitUart0();
+void uart0Isr();
+bool emptyRingBuffer();
+bool fullRingBuffer();
+void writeToQueue(char c);
+char readFromQueue();
+void sendUart0String(char str[]);
 
 #endif

@@ -53,6 +53,7 @@ extern uint32_t __STACK_TOP;
 
 extern void tickIsr(void);
 extern void uart1Isr(void);
+extern void uart0Isr(void);
 
 //*****************************************************************************
 // To be added by user
@@ -89,7 +90,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // GPIO Port C
     IntDefaultHandler,                      // GPIO Port D
     IntDefaultHandler,                      // GPIO Port E
-    IntDefaultHandler,                      // UART0 Rx and Tx
+    uart0Isr,                               // UART0 Rx and Tx
     uart1Isr,                               // UART1 Rx and Tx
     IntDefaultHandler,                      // SSI0 Rx and Tx
     IntDefaultHandler,                      // I2C0 Master and Slave
