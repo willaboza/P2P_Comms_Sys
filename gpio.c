@@ -138,6 +138,8 @@ void selectPinDigitalOutput(PORT port, uint8_t pin)
     *p = 0;
     p = (uint32_t*)port + pin + OFS_DATA_TO_DEN;
     *p = 1;
+    p = (uint32_t*)port + pin + OFS_DATA_TO_PDR;
+    *p = 1;
     p = (uint32_t*)port + pin + OFS_DATA_TO_AMSEL;
     *p = 0;
 }
@@ -367,7 +369,3 @@ uint8_t getPortValue(PORT port)
     }
     return value;
 }
-
-
-
-

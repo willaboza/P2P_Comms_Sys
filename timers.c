@@ -19,7 +19,9 @@
 #include "timers.h"
 
 bool TX_FLASH_LED = 0;
+bool RX_FLASH_LED = 0;
 uint32_t TX_FLASH_TIMEOUT = 0;
+uint32_t RX_FLASH_TIMEOUT = 0;
 
 // Function To Initialize Timers
 void initTimer()
@@ -68,6 +70,14 @@ void tickIsr()
          if(TX_FLASH_TIMEOUT == 0)
          {
              setPinValue(RED_LED, TX_FLASH_LED = 0); // Turn LED OFF
+         }
+     }
+    if(RX_FLASH_TIMEOUT > 0)
+     {
+         RX_FLASH_TIMEOUT--;
+         if(RX_FLASH_TIMEOUT == 0)
+         {
+             setPinValue(GREEN_LED, RX_FLASH_LED = 0); // Turn LED OFF
          }
      }
     TIMER4_ICR_R = TIMER_ICR_TATOCINT;

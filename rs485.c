@@ -74,7 +74,7 @@ void setACV(uint8_t address, uint8_t channel, char c[])
     table[index].seqId = (uint8_t)random32(); // Set Sequence ID for Message
 
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
-    putsUart0(str);
+    sendUart0String(str);
 
     if(ackFlagSet)
     {
@@ -130,7 +130,7 @@ void getAC(uint8_t address, uint8_t channel)
     table[index].seqId = (uint8_t)random32();
 
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
-    putsUart0(str);
+    sendUart0String(str);
 
     table[index].dstAdd = address;
     table[index].ackCmd = 0x20; // Data Request Command is 0x20h
@@ -182,7 +182,7 @@ void poll()
     table[index].seqId = (uint8_t)random32();
 
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
-    putsUart0(str);
+    sendUart0String(str);
 
     table[index].dstAdd = 0xFF;
     table[index].attempts = 0;
@@ -226,7 +226,7 @@ void setNewAddress(uint8_t oldAddress, uint8_t newAddress)
     table[index].seqId = (uint8_t)random32();
 
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
-    putsUart0(str);
+    sendUart0String(str);
 
     table[index].dstAdd = oldAddress;
     table[index].ackCmd = 0x7A; // Set Command is 0x00h
@@ -278,7 +278,7 @@ void sendDataRequest(uint8_t address, uint8_t channel, uint8_t value)
     table[index].seqId = (uint8_t)random32();
 
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
-    putsUart0(str);
+    sendUart0String(str);
 
     table[index].dstAdd = address;
     table[index].ackCmd = 0x21; // Data Report is 0x21h
@@ -331,7 +331,7 @@ void sendReset(uint8_t address)
     table[index].seqId = (uint8_t)random32();
 
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
-    putsUart0(str);
+    sendUart0String(str);
 
     table[index].dstAdd = address;
     table[index].ackCmd = 0x7F; // Data Report is 0x21h
@@ -383,7 +383,7 @@ void sendAcknowledge(uint8_t address, uint8_t id)
     table[index].seqId = (uint8_t)random32();
 
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
-    putsUart0(str);
+    sendUart0String(str);
 
     table[index].dstAdd = address;
     table[index].ackCmd = 0x70; // Data Report is 0x21h
@@ -427,7 +427,7 @@ void sendPollResponse(uint8_t address)
     table[index].seqId = (uint8_t)random32();
 
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
-    putsUart0(str);
+    sendUart0String(str);
 
     table[index].dstAdd = address;
     table[index].ackCmd = 0x79;  // Poll Response is 0x79h

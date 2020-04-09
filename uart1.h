@@ -14,6 +14,7 @@
 #include "gpio.h"
 #include "uart0.h"
 #include "rs485.h"
+#include "timers.h"
 
 // Pins
 #define DRIVER_ENABLE PORTB,2

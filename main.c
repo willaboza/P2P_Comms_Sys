@@ -55,10 +55,12 @@ int main(void)
     setUart1BaudRate(38400, 40e6);
 
     // Flash LED
+    /*
     setPinValue(GREEN_LED, 1);
     waitMicrosecond(100000);
     setPinValue(GREEN_LED, 0);
     waitMicrosecond(100000);
+    */
 
     // Get current value for SOURCE_ADDRESS
     readEepromAddress();
@@ -66,17 +68,12 @@ int main(void)
     // Seed random variable with current Source Address
     srand(SOURCE_ADDRESS);
 
-    // Set Sequence ID for Message
-    seqId = (rand() + (uint8_t)random32());
-
     // Set Variables for User Input to Initial Condition
     resetUserInput(&userInput);
 
     // Display Main Menu
     putsUart0("\r\n");
     printMainMenu();
-
-    setPinValue(DRIVER_ENABLE, 1);  // Set value to 1 before Tx packet
 
     while(true)
     {

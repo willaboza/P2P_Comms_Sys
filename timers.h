@@ -23,7 +23,9 @@
 #define BACKOFF_BASE_NUMBER 250
 
 extern bool TX_FLASH_LED;
+extern bool RX_FLASH_LED;
 extern uint32_t TX_FLASH_TIMEOUT;
+extern uint32_t RX_FLASH_TIMEOUT;
 
 void initTimer();
 void tickIsr();
