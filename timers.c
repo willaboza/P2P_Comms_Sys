@@ -45,7 +45,7 @@ void tickIsr()
     uint8_t i;
     for(i = 0; i < NUM_TIMERS; i++)
     {
-        if(table[i].backoff != 0 && table[i].validBit)
+        if((table[i].backoff != 0) && table[i].validBit && (table[i].retries != 0))
         {
             table[i].backoff--;
             // If validBit = 1 && backoff = 0 can start to send message
@@ -71,14 +71,16 @@ void tickIsr()
              setPinValue(RED_LED, TX_FLASH_LED = 0); // Turn LED OFF
          }
      }
+    /*
     if(RX_FLASH_TIMEOUT > 0)
-     {
-         RX_FLASH_TIMEOUT--;
-         if(RX_FLASH_TIMEOUT == 0)
-         {
-             setPinValue(GREEN_LED, RX_FLASH_LED = 0); // Turn LED OFF
-         }
-     }
+    {
+        RX_FLASH_TIMEOUT--;
+        if(RX_FLASH_TIMEOUT == 0)
+        {
+            setPinValue(GREEN_LED, RX_FLASH_LED = 0); // Turn LED OFF
+        }
+    }
+     */
     TIMER4_ICR_R = TIMER_ICR_TATOCINT;
 }
 

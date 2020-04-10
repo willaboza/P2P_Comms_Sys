@@ -172,18 +172,4 @@ void printMainMenu()
     sendUart0String("  ack on\r\n");
     sendUart0String("  ack off\r\n");
     sendUart0String("\r\n");
-
-    /*
-    putsUart0("Commands:\r\n");
-    putsUart0("  reset A\r\n");
-    putsUart0("  cs ON|OFF\r\n");
-    putsUart0("  random ON|OFF\r\n");
-    putsUart0("  set A C V\r\n");
-    putsUart0("  get A C\r\n");
-    putsUart0("  poll\r\n");
-    putsUart0("  sa A Anew\r\n");
-    putsUart0("  ack on\r\n");
-    putsUart0("  ack off\r\n");
-    putsUart0("\r\n");
-    */
 }

@@ -102,7 +102,6 @@ void sendUart0String(char str[])
             writeToQueue(str[i]);
             i++;
         }
-        //i++;
     }
 
     // Check to see if UART Tx holding register is empty

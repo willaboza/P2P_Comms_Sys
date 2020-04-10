@@ -191,13 +191,14 @@ void poll()
     table[index].channel = 0;
 
     // Clear out data field with all zeros
+    /*
     i = 0;
     while(i < DATA_MAX_SIZE)
     {
         table[index].data[i] = 0;
         i++;
     }
-
+    */
     table[index].size     = 0;
     table[index].checksum = 0;
     setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
@@ -470,68 +471,64 @@ void sendPacket(uint8_t index)
     if(phase == 0) // Tx DESTINATION ADDRESS
     {
         setPinValue(DRIVER_ENABLE, 1);    // Turn ON Driver Enable (DE) for RS-485 to Tx
-        UART1_LCRH_R &= ~(UART_LCRH_EPS); // turn-off EPS before Tx dstAdd, sets parity bit = 1
-        UART1_DR_R = table[index].dstAdd;
+        UART1_LCRH_R &= ~(UART_LCRH_EPS); // Turn OFF EPS before Tx dstAdd, sets parity bit = 1
+        UART1_DR_R = table[index].dstAdd; // Transmit destination address
+        UART1_LCRH_R |= UART_LCRH_EPS;    // Turn ON EPS before Tx all bytes except Destination Address
         table[index].phase ++;
-        UART1_LCRH_R |= UART_LCRH_EPS;    // turn-on EPS before Tx all bytes except Destination Address
     }
     else if(phase == 1) // Tx SOURCE_ADDRESS
     {
-        UART1_LCRH_R |= UART_LCRH_EPS; // turn-on EPS before Tx all bytes except Destination Address
         UART1_DR_R = SOURCE_ADDRESS;
         table[index].phase ++;
     }
     else if(phase == 2) // Tx SEQUENCE ID
     {
-        UART1_LCRH_R |= UART_LCRH_EPS; // turn-on EPS before Tx all bytes except Destination Address
         UART1_DR_R = table[index].seqId;
         table[index].phase ++;
     }
     else if(phase == 3) // Tx ACK & COMMAND
     {
-        UART1_LCRH_R |= UART_LCRH_EPS; // turn-on EPS before Tx all bytes except Destination Address
         UART1_DR_R = table[index].ackCmd;
         table[index].phase ++;
     }
     else if(phase == 4) // Tx CHANNEL
     {
-        UART1_LCRH_R |= UART_LCRH_EPS; // turn-on EPS before Tx all bytes except Destination Address
         UART1_DR_R = table[index].channel;
         table[index].phase ++;
     }
     else if(phase == 5) // Tx SIZE
     {
-        UART1_LCRH_R |= UART_LCRH_EPS; // turn-on EPS before Tx all bytes except Destination Address
         UART1_DR_R = table[index].size;
         table[index].phase ++;
     }
     else if(phase > 5 && phase < size) // Tx DATA[]
     {
-        UART1_LCRH_R |= UART_LCRH_EPS; // turn-on EPS before Tx all bytes except Destination Address
         UART1_DR_R = (table[index].dstAdd + phase);
         table[index].phase ++;
     }
     else if(phase == size) // Tx CHECKSUM
     {
         UART1_DR_R = table[index].checksum;
-        table[index].phase = 0; // Set phase = 0 after Tx checksum
-        table[index].retries--; // Decrement Tx retries remaining
+        table[index].phase = 0;             // Set phase = 0 after Tx checksum
+        table[index].retries--;             // Decrement Tx retries remaining
         table[index].backoff = calcNewBackoff(table[index].attempts);
 
         // If ACK Requested and MAX_ReTransmissions sent w/out ACK send error msg to PC
-        if((table[index].retries == 0) && (table[index].ackCmd & 0x80)) //
+        if((table[index].retries == 0) && (table[index].ackCmd & 0x80) && table[index].validBit)
         {
             char str[50];
             sprintf(str, "  Error Sending Msg %u\r\n", table[index].seqId);
             sendUart0String(str);
         }
 
-        if(table[index].retries == 0) // Delete message from Tx Queue
+        if(table[index].retries == 0)      // Delete message from Tx Queue
         {
             table[index].validBit = false; // Set valid bit to false as finished transmitting the packet
         }
 
         while(UART1_FR_R & UART_FR_BUSY);  // Wait until UART is not busy before proceeding
+
+        UART1_LCRH_R &= ~(UART_LCRH_EPS);  // turn-off EPS before Tx dstAdd, sets parity bit = 1
 
         setPinValue(DRIVER_ENABLE, 0);     // Turn OFF Driver Enable (DE) on RS-485
     }
@@ -567,11 +564,6 @@ void setPacketFrame(uint8_t index)
     txInfo.channel = table[index].channel;
     txInfo.size    = table[index].size;
 
-    for(i = 0; i < DATA_MAX_SIZE; i++)
-    {
-        txInfo.data[i] = 0;
-    }
-
     for(i = 0; i < txInfo.size; i++)
     {
         txInfo.data[i] = table[index].data[i];
@@ -594,13 +586,11 @@ void sumWords(void* data, uint16_t sizeInBytes)
 // Completes 1's compliment addition by folding carries back into field
 uint8_t getChecksum()
 {
-    uint16_t size;
     uint8_t tmp8;
     sum = 0;
-    size = txInfo.size;
 
     sumWords(&txInfo.dstAdd, 6);
-    sumWords(&txInfo.data, size);
+    sumWords(&txInfo.data, txInfo.size);
 
     tmp8 = ~(sum);
 
@@ -643,7 +633,7 @@ void takeAction()
     {
         // Set Command
         case 0x00:
-            putsUart0("  Set\r\n");
+            sendUart0String("  Set\r\n");
             if(ackFlagSet)
             {
                 sendAcknowledge(rxInfo.srcAdd, rxInfo.seqId);
@@ -654,7 +644,7 @@ void takeAction()
 
         // Pulse Command
         case 0x20:
-            putsUart0("  Data Request\r\n");
+            sendUart0String("  Data Request\r\n");
             if(ackFlagSet)
             {
                 sendAcknowledge(rxInfo.srcAdd, rxInfo.seqId);
@@ -664,33 +654,30 @@ void takeAction()
 
         // Data Request
         case 0x21:
-            putsUart0("  Data Report\r\n");
             sprintf(str, "  Status = %02u for Channel %02u at Add = %02u\r\n", rxInfo.data[0], rxInfo.channel, rxInfo.dstAdd);
             sendUart0String(str);
             break;
 
         // ACK Command
         case 0x70:
-            putsUart0("  Acknowledge\r\n");
+            sendUart0String("  Acknowledge\r\n");
             ackReceived(); // Check for seqId match
             break;
 
         // Poll Request
         case 0x78:
-            putsUart0("  Poll Request\r\n");
+            sendUart0String("  Rx Poll Request\r\n");
             sendPollResponse(rxInfo.srcAdd);
             break;
 
         // Poll Response
         case 0x79:
-            putsUart0("  Poll Response\r\n");
             sprintf(str, "  Address %02u Responded\r\n", rxInfo.srcAdd);
             sendUart0String(str);
             break;
 
         // Set Address
         case 0x7A:
-            putsUart0("  Set Address\r\n");
             if(ackFlagSet)
             {
                 sendAcknowledge(rxInfo.srcAdd, rxInfo.seqId);
@@ -702,22 +689,22 @@ void takeAction()
 
         // Node Control
         case 0x7D:
-            putsUart0("  Node Control\r\n");
+            sendUart0String("  Node Control\r\n");
             break;
 
         // Bootload
         case 0x7E:
-            putsUart0("  Bootload\r\n");
+            sendUart0String("  Bootload\r\n");
             break;
 
         // Reset
         case 0x7F:
-            putsUart0("  Reset\r\n");
+            sendUart0String("  Reset\r\n");
             rebootFlag = true; // Setting flag to TRUE will cause controller to restart
             break;
 
         default:
-            putsUart0("  Command Not Recognized\r\n");
+            sendUart0String("  Command Not Recognized\r\n");
             break;
     }
 }
