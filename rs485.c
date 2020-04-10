@@ -187,8 +187,7 @@ void poll()
     table[index].dstAdd = 0xFF;
     table[index].attempts = 0;
     table[index].ackCmd = 0x78; // Send a Poll Request
-    table[index].ackCmd = (table[index].ackCmd | 0x80); // Add Ack flag to (MSB) to the field
-    table[index].retries = 1; // Set retries to 4 when ACK flag set
+    table[index].retries = 1;   // Set retries to 4 when ACK flag set
     table[index].channel = 0;
 
     // Clear out data field with all zeros
@@ -471,9 +470,10 @@ void sendPacket(uint8_t index)
     if(phase == 0) // Tx DESTINATION ADDRESS
     {
         setPinValue(DRIVER_ENABLE, 1);    // Turn ON Driver Enable (DE) for RS-485 to Tx
-        UART1_LCRH_R |= ~(UART_LCRH_EPS); // turn-off EPS before Tx dstAdd, sets parity bit = 1
+        UART1_LCRH_R &= ~(UART_LCRH_EPS); // turn-off EPS before Tx dstAdd, sets parity bit = 1
         UART1_DR_R = table[index].dstAdd;
         table[index].phase ++;
+        UART1_LCRH_R |= UART_LCRH_EPS;    // turn-on EPS before Tx all bytes except Destination Address
     }
     else if(phase == 1) // Tx SOURCE_ADDRESS
     {

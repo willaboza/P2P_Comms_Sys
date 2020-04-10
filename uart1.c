@@ -26,8 +26,9 @@ void initUart1()
     setPinAuxFunction(UART1_RX, GPIO_PCTL_PB0_U1RX);
 
     // Configure DE Pin for RS-485
-//    selectPinDigitalOutput(DRIVER_ENABLE);
-//    setPinValue(DRIVER_ENABLE, 0);
+    // selectPinDigitalOutput(DRIVER_ENABLE);
+    selectPinPushPullOutput(DRIVER_ENABLE);
+    setPinValue(DRIVER_ENABLE, 0);
 
     // Configure UART1 with default baud rate
     UART1_CTL_R = 0;                             // Turn-off UART1 to allow safe programming
@@ -42,7 +43,7 @@ void setUart1BaudRate(uint32_t baudRate, uint32_t fcyc)
     UART1_CTL_R  = 0;                                   // turn-off UART1 to allow safe programming
     UART1_IBRD_R = divisorTimes128 >> 7;                // set integer value to floor(r)
     UART1_FBRD_R = ((divisorTimes128 + 1) >> 1) & 63;   // set fractional value to round(fract(r)*64)
-    UART1_LCRH_R = UART_LCRH_SPS | UART_LCRH_WLEN_8 | ~UART_LCRH_STP2 | UART_LCRH_PEN | UART_LCRH_EPS | ~UART_LCRH_BRK;    // configure for 8N1 w/ 16-level FIFO
+    UART1_LCRH_R = UART_LCRH_SPS | UART_LCRH_WLEN_8 | UART_LCRH_PEN | UART_LCRH_EPS;    // configure for 8N1 w/ 16-level FIFO
     UART1_CTL_R  = UART_CTL_TXE | UART_CTL_RXE | UART_CTL_UARTEN;       //on UART1
     UART1_IM_R   = UART_IM_TXIM | UART_IM_RXIM;
     NVIC_EN0_R |= 1 << (INT_UART1-16);                  // turn-on interrupt 22 (UART1)
@@ -53,9 +54,13 @@ void uart1Isr()
 {
     uint8_t tmp8, size;
 
+    tmp8 = UART1_DR_R;
+    UART1_ICR_R = 0xFF;
+
     // Check to see if UART Tx holding register is empty
     if(UART1_FR_R & UART_FR_TXFE)
     {
+        UART1_ICR_R = 0xFF;
         sendPacket(messageInProgress); // Transmit next byte of packet
     }
 
@@ -153,5 +158,5 @@ void uart1Isr()
                 }
         }
     }
-    UART1_ICR_R = 0xFF; // Writing a 1 to the bits in this register clears the bits in the UARTRIS and UARTMIS registers
+//    UART1_ICR_R = 0xFF; // Writing a 1 to the bits in this register clears the bits in the UARTRIS and UARTMIS registers
 }

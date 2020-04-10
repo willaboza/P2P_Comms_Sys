@@ -58,7 +58,6 @@ void tickIsr()
                 {
                     sprintf(str, "  Transmitting Msg %u, Attempt %u\r\n", table[i].seqId, ++table[i].attempts);
                     sendUart0String(str);
-                    UART1_LCRH_R &= ~UART_LCRH_EPS;   // turn-off EPS before Tx dstAdd, sets parity bit = 1
                     sendPacket(messageInProgress);
                 }
             }

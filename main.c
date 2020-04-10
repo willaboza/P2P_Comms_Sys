@@ -55,12 +55,10 @@ int main(void)
     setUart1BaudRate(38400, 40e6);
 
     // Flash LED
-    /*
     setPinValue(GREEN_LED, 1);
     waitMicrosecond(100000);
     setPinValue(GREEN_LED, 0);
     waitMicrosecond(100000);
-    */
 
     // Get current value for SOURCE_ADDRESS
     readEepromAddress();
