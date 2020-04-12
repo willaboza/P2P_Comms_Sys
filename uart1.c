@@ -8,6 +8,8 @@
 #include "uart1.h"
 
 uint16_t rxPhase = 0;
+bool transmitState = 0;
+uint16_t lastSequenceId = 500;
 
 // Initialize UART1
 void initUart1()
@@ -51,8 +53,25 @@ void setUart1BaudRate(uint32_t baudRate, uint32_t fcyc)
 // Implement the ISR for UART1
 void uart1Isr()
 {
-    // Check to see if Rx is NOT empty
-    if(!(UART1_FR_R & UART_FR_RXFE))
+
+    // Check to see if UART Tx  register is empty and TXMIS bit set in MIS register
+    if((UART1_FR_R & UART_FR_TXFE) && (UART1_MIS_R & UART_MIS_TXMIS))
+    {
+        // Writing a 1 to the bits in this register clears
+        // the bits in the UARTRIS and UARTMIS registers.
+        UART1_ICR_R = 0xFFFFFFFF;
+
+        if(table[messageInProgress].phase == 0)
+        {
+            UART1_LCRH_R &= ~(UART_LCRH_EPS); // Turn OFF EPS before Tx dstAdd, sets parity bit = 1
+        }
+
+        // Transmit next byte of packet
+        sendPacket(messageInProgress);
+    }
+
+    // Check to see if Rx is NOT empty && whether transmitting data
+    if(!(UART1_FR_R & UART_FR_RXFE) && (UART1_MIS_R & UART_MIS_RXMIS))
     {
         uint8_t data;
 
@@ -69,18 +88,7 @@ void uart1Isr()
 
         // Clear Interrupts and Errors
         UART1_ECR_R = 0;
-        UART1_ICR_R = 0xFF;
-    }
-
-    // Check to see if UART Tx  register is empty and TXMIS bit set in MIS register
-    if((UART1_FR_R & UART_FR_TXFE) && (UART1_MIS_R & UART_MIS_TXMIS))
-    {
-        // Writing a 1 to the bits in this register clears
-        // the bits in the UARTRIS and UARTMIS registers.
-        UART1_ICR_R = 0xFF;
-
-        // Transmit next byte of packet
-        sendPacket(messageInProgress);
+        UART1_ICR_R = 0xFFFFFFFF;
     }
 }
 
@@ -146,8 +154,9 @@ void processRxPacket(uint8_t data)
                 data = (sum + rxInfo.checksum); // Sum all fields for Rx'd packet and add with sender's checksum
 
                 // If tmp8 = 0xFF then packet Rx'd is valid
-                if(data == 0xFF)
+                if(data == 0xFF && (rxInfo.seqId != lastSequenceId))
                 {
+                    lastSequenceId = rxInfo.seqId;
                     takeAction(); // Perform action for Command Rx'd
                 }
                 else

@@ -16,6 +16,7 @@ void getsUart0(USER_DATA* data)
     count = data->characterCount;
 
     c = getcUart0();
+    UART0_ICR_R = 0xFFF; // Clear any interrupts
     if((c == 13) || (count == MAX_CHARS))
     {
         data->buffer[count++] = '\0';

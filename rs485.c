@@ -2,7 +2,7 @@
  * rs485.c
  *
  *  Created on: Mar 26, 2020
- *      Author: willi
+ *      Author: William Bozarth
  */
 
 #include "rs485.h"
@@ -10,6 +10,7 @@
 bool carrierSenseFlag      = false;
 bool ackFlagSet            = false;
 bool randomFlag            = false;
+bool GREEN_LED_FLASH       = 0;
 uint8_t SOURCE_ADDRESS     = 1;
 uint8_t BACKOFF_ATTEMPTS   = 4;
 uint8_t seqId              = 0;
@@ -109,12 +110,7 @@ void setACV(uint8_t address, uint8_t channel, char c[])
     table[index].checksum = 0;
     setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
     table[index].checksum = getChecksum(); // Perform checksum calculations
-
-    // When Checksum set
-    setPinValue(RED_LED, TX_FLASH_LED = 1);
-    TX_FLASH_TIMEOUT = 1000;
-
-    table[index].validBit = true; // Ready to Tx data packet
+    table[index].validBit = true;          // Ready to Tx data packet
 }
 
 // Function to send a Data Request to a specified Address and Channel
@@ -161,11 +157,6 @@ void getAC(uint8_t address, uint8_t channel)
     table[index].checksum = getChecksum(); // Perform checksum calculations
     table[index].phase    = 0;             // Byte to transmit is DST_ADD
     table[index].backoff  = 1;             // Backoff set
-
-    // When Checksum set
-    TX_FLASH_TIMEOUT = 1000;
-    setPinValue(RED_LED, TX_FLASH_LED = 1);
-
     table[index].validBit = true; //
 }
 
@@ -184,32 +175,17 @@ void poll()
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
     sendUart0String(str);
 
-    table[index].dstAdd = 0xFF;
+    table[index].dstAdd   = 0xFF;
     table[index].attempts = 0;
-    table[index].ackCmd = 0x78; // Send a Poll Request
-    table[index].retries = 1;   // Set retries to 4 when ACK flag set
-    table[index].channel = 0;
-
-    // Clear out data field with all zeros
-    /*
-    i = 0;
-    while(i < DATA_MAX_SIZE)
-    {
-        table[index].data[i] = 0;
-        i++;
-    }
-    */
+    table[index].ackCmd   = 0x78; // Send a Poll Request
+    table[index].retries  = 1;   // Set retries to 4 when ACK flag set
+    table[index].channel  = 0;
     table[index].size     = 0;
     table[index].checksum = 0;
     setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
     table[index].checksum = getChecksum(); // Perform checksum calculations
     table[index].phase    = 0;             // Byte to transmit is DST_ADD
     table[index].backoff  = 1;             // Backoff set to 500 milliseconds
-
-    // When Checksum set
-    TX_FLASH_TIMEOUT = 1000;
-    setPinValue(RED_LED, TX_FLASH_LED = 1);
-
     table[index].validBit = true;
 }
 
@@ -258,11 +234,6 @@ void setNewAddress(uint8_t oldAddress, uint8_t newAddress)
     table[index].checksum = 0;
     setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
     table[index].checksum = getChecksum(); // Perform checksum calculations
-
-    // When Checksum set
-    TX_FLASH_TIMEOUT = 1000;
-    setPinValue(RED_LED, TX_FLASH_LED = 1);
-
     table[index].validBit = true; // Ready to Tx data packet
 }
 
@@ -310,11 +281,6 @@ void sendDataRequest(uint8_t address, uint8_t channel, uint8_t value)
     table[index].checksum = 0;
     setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
     table[index].checksum = getChecksum(); // Perform checksum calculations
-
-    // When Checksum set
-    TX_FLASH_TIMEOUT = 1000;
-    setPinValue(RED_LED, TX_FLASH_LED = 1);
-
     table[index].validBit = true; // Ready to Tx data packet
 }
 
@@ -363,11 +329,6 @@ void sendReset(uint8_t address)
     table[index].checksum = 0;
     setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
     table[index].checksum = getChecksum(); // Perform checksum calculations
-
-    // When Checksum set flash RED_LED
-    TX_FLASH_TIMEOUT = 1000;
-    setPinValue(RED_LED, TX_FLASH_LED = 1);
-
     table[index].validBit = true; // Ready to Tx data packet
 }
 
@@ -406,11 +367,6 @@ void sendAcknowledge(uint8_t address, uint8_t id)
     table[index].checksum = 0;
     setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
     table[index].checksum = getChecksum(); // Perform checksum calculations
-
-    // When Checksum set flash RED_LED
-    TX_FLASH_TIMEOUT = 1000;
-    setPinValue(RED_LED, TX_FLASH_LED = 1);
-
     table[index].validBit = true; // Ready to Tx data packet
 }
 
@@ -429,20 +385,11 @@ void sendPollResponse(uint8_t address)
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
     sendUart0String(str);
 
-    table[index].dstAdd = address;
-    table[index].ackCmd = 0x79;  // Poll Response is 0x79h
+    table[index].dstAdd   = address;
+    table[index].ackCmd   = 0x79;  // Poll Response is 0x79h
     table[index].attempts = 0;
     table[index].retries  = 1;   // Set retries to 1 when ACK flag NOT set
     table[index].channel  = 0;
-
-    // Clear out data field with all zeros
-    i = 0;
-    while(i < DATA_MAX_SIZE)
-    {
-        table[index].data[i] = 0;
-        i++;
-    }
-
     table[index].data[0]  = SOURCE_ADDRESS;
     table[index].size     = 1;
     table[index].phase    = 0;             // Byte to transmit is DST_ADD
@@ -450,11 +397,6 @@ void sendPollResponse(uint8_t address)
     table[index].checksum = 0;
     setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
     table[index].checksum = getChecksum(); // Perform checksum calculations
-
-    // When Checksum set flash RED_LED
-    TX_FLASH_TIMEOUT = 1000;
-    setPinValue(RED_LED, TX_FLASH_LED = 1);
-
     table[index].validBit = true; // Ready to Tx data packet
 }
 
@@ -468,69 +410,81 @@ void sendPacket(uint8_t index)
     size = table[index].size + 6; // Size of data packet
     phase = table[index].phase;   // Store current phase value
 
-    if(phase == 0) // Tx DESTINATION ADDRESS
+    switch(phase)
     {
-        setPinValue(DRIVER_ENABLE, 1);    // Turn ON Driver Enable (DE) for RS-485 to Tx
-        UART1_LCRH_R &= ~(UART_LCRH_EPS); // Turn OFF EPS before Tx dstAdd, sets parity bit = 1
-        UART1_DR_R = table[index].dstAdd; // Transmit destination address
-        UART1_LCRH_R |= UART_LCRH_EPS;    // Turn ON EPS before Tx all bytes except Destination Address
-        table[index].phase ++;
-    }
-    else if(phase == 1) // Tx SOURCE_ADDRESS
-    {
-        UART1_DR_R = SOURCE_ADDRESS;
-        table[index].phase ++;
-    }
-    else if(phase == 2) // Tx SEQUENCE ID
-    {
-        UART1_DR_R = table[index].seqId;
-        table[index].phase ++;
-    }
-    else if(phase == 3) // Tx ACK & COMMAND
-    {
-        UART1_DR_R = table[index].ackCmd;
-        table[index].phase ++;
-    }
-    else if(phase == 4) // Tx CHANNEL
-    {
-        UART1_DR_R = table[index].channel;
-        table[index].phase ++;
-    }
-    else if(phase == 5) // Tx SIZE
-    {
-        UART1_DR_R = table[index].size;
-        table[index].phase ++;
-    }
-    else if(phase > 5 && phase < size) // Tx DATA[]
-    {
-        UART1_DR_R = (table[index].dstAdd + phase);
-        table[index].phase ++;
-    }
-    else if(phase == size) // Tx CHECKSUM
-    {
-        UART1_DR_R = table[index].checksum;
-        table[index].phase = 0;             // Set phase = 0 after Tx checksum
-        table[index].retries--;             // Decrement Tx retries remaining
-        table[index].backoff = calcNewBackoff(table[index].attempts);
+        // Tx DESTINATION ADDRESS
+        case 0:
+            setPinValue(DRIVER_ENABLE, 1);    // Turn ON Driver Enable (DE) for RS-485 to Tx
+            UART1_DR_R = table[index].dstAdd; // Transmit destination address
+            table[index].phase = 1;
+            UART1_LCRH_R |= UART_LCRH_EPS;    // Turn ON EPS before Tx all bytes except Destination Address
+            break;
+        // Tx SOURCE_ADDRESS
+        case 1:
+            UART1_DR_R = SOURCE_ADDRESS;
+            table[index].phase = 2;
+            break;
+        // Tx SEQUENCE ID
+        case 2:
+            UART1_DR_R = table[index].seqId;
+            table[index].phase = 3;
+            break;
+        // Tx ACK & COMMAND
+        case 3:
+            UART1_DR_R = table[index].ackCmd;
+            table[index].phase = 4;
+            break;
+        // Tx CHANNEL
+        case 4:
+            UART1_DR_R = table[index].channel;
+            table[index].phase = 5;
+            break;
+        // Tx SIZE
+        case 5:
+            UART1_DR_R = table[index].size;
+            table[index].phase = 6;
+            break;
+        // Tx DATA[] and CHECKSUM
+        default:
+            if(phase < size) // Tx Data
+            {
+                UART1_DR_R = (table[phase-7].dstAdd); // Subtract by 7 to set initial data stored in array at index = 0
+                table[index].phase++; // increment phase
+            }
+            else if(phase == size) // Tx Checksum
+            {
+                UART1_DR_R = table[index].checksum;
+                table[index].retries--; // Decrement Tx retries remaining
+                table[index].phase = 0; // Set phase = 0 after Tx checksum
 
-        // If ACK Requested and MAX_ReTransmissions sent w/out ACK send error msg to PC
-        if((table[index].retries == 0) && (table[index].ackCmd & 0x80) && table[index].validBit)
-        {
-            char str[50];
-            sprintf(str, "  Error Sending Msg %u\r\n", table[index].seqId);
-            sendUart0String(str);
-        }
+                while(UART1_FR_R & UART_FR_BUSY);  // Wait until UART is not busy before proceeding
 
-        if(table[index].retries == 0)      // Delete message from Tx Queue
-        {
-            table[index].validBit = false; // Set valid bit to false as finished transmitting the packet
-        }
+                UART1_ICR_R = 0xFFFFFFFF;
 
-        while(UART1_FR_R & UART_FR_BUSY);  // Wait until UART is not busy before proceeding
+                setPinValue(DRIVER_ENABLE, 0);     // Turn OFF Driver Enable (DE) on RS-485
 
-        UART1_LCRH_R &= ~(UART_LCRH_EPS);  // turn-off EPS before Tx dstAdd, sets parity bit = 1
+                // If ACK Requested and MAX_ReTransmissions sent w/out ACK send error msg to PC
+                if((table[index].retries == 0) && (table[index].ackCmd & 0x80)) //
+                {
+                    char str[50];
 
-        setPinValue(DRIVER_ENABLE, 0);     // Turn OFF Driver Enable (DE) on RS-485
+                    // When Checksum set flash RED_LED
+                    TX_FLASH_TIMEOUT = 1000;
+                    setPinValue(RED_LED, 1);
+
+                    sprintf(str, "  Error Sending Msg %u\r\n", table[index].seqId);
+                    sendUart0String(str);
+                }
+
+                if(table[index].retries == 0) // Delete message from Tx Queue
+                {
+                    table[index].validBit = false; // Set valid bit to false as finished transmitting the packet
+                }
+                else
+                {
+                    table[index].backoff = calcNewBackoff(table[index].attempts);
+                }
+            }
     }
 }
 
@@ -625,7 +579,7 @@ void ackReceived()
 void takeAction()
 {
     uint8_t command, channel, value;
-    char str[DATA_MAX_SIZE];
+    char str[50];
 
     command = (rxInfo.ackCmd & 0x7F); // Mask Bits to remove ACK if set
 
@@ -644,7 +598,6 @@ void takeAction()
 
         // Pulse Command
         case 0x20:
-            sendUart0String("  Data Request\r\n");
             if(ackFlagSet)
             {
                 sendAcknowledge(rxInfo.srcAdd, rxInfo.seqId);
@@ -666,13 +619,12 @@ void takeAction()
 
         // Poll Request
         case 0x78:
-            sendUart0String("  Rx Poll Request\r\n");
             sendPollResponse(rxInfo.srcAdd);
             break;
 
         // Poll Response
         case 0x79:
-            sprintf(str, "  Address %02u Responded\r\n", rxInfo.srcAdd);
+            sprintf(str, "  Address %02u Responded\r\n", rxInfo.data[0]);
             sendUart0String(str);
             break;
 

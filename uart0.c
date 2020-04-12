@@ -104,8 +104,9 @@ void sendUart0String(char str[])
         }
     }
 
+    UART0_ICR_R = 0xFFF;
     // Check to see if UART Tx holding register is empty
-    if(UART0_FR_R & UART_FR_TXFE)
+    if(UART0_FR_R & UART_FR_TXFE  && !(emptyRingBuffer()))
     {
         UART0_DR_R = readFromQueue(); // "Prime Pump" by writing 1st char to Uart0
     }
@@ -157,7 +158,7 @@ bool fullRingBuffer()
 void uart0Isr()
 {
     // Writing a 1 to the bits in this register clears the bits in the UARTRIS and UARTMIS registers
-    UART0_ICR_R = 0xFF;
+    UART0_ICR_R = 0xFFF;
     // Check to see if UART Tx holding register is empty and send next byte of data
     if((UART0_FR_R & UART_FR_TXFE) && !(emptyRingBuffer()))
     {

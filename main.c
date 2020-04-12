@@ -90,13 +90,9 @@ int main(void)
         {
             char *token;
 
-            token = getFieldString(&userInput, 1);
+            token = getFieldInteger(&userInput, 1);
 
-            if(strcmp(token, "A") == 0)
-            {
-                putsUart0("  Reset Sent\r\n");
-                sendReset(token);
-            }
+            sendReset(token);
 
             resetUserInput(&userInput); // Reset Input from User to Rx Next Command
         }
@@ -144,7 +140,6 @@ int main(void)
             address = getFieldInteger(&userInput, 1);
             channel = getFieldInteger(&userInput, 2);
             strcpy(token,getFieldString(&userInput, 3));
-
             setACV(address, channel, token);
 
             resetUserInput(&userInput);
@@ -157,7 +152,6 @@ int main(void)
             channel = getFieldInteger(&userInput, 2);
             getAC(address, channel);
 
-            putsUart0("  get A C\r\n");
             resetUserInput(&userInput);
         }
         else if(userInput.endOfString && isCommand(&userInput, "poll", 1))
@@ -173,7 +167,6 @@ int main(void)
             newAddress = getFieldInteger(&userInput, 2);
             setNewAddress(oldAddress, newAddress);
 
-            putsUart0("  sa A Anew\r\n");
             resetUserInput(&userInput);
         }
         else if(userInput.endOfString && isCommand(&userInput, "ack", 2))
@@ -186,13 +179,11 @@ int main(void)
             {
                 BACKOFF_ATTEMPTS = 4; // Set to 4 for ACK ON
                 ackFlagSet = true;
-                putsUart0("  ACK Enabled\r\n");
             }
             else if(strcmp(token, "off") == 0)
             {
                 BACKOFF_ATTEMPTS = 1; // Set to 1 for ACK OFF
                 ackFlagSet = false;
-                putsUart0("  ACK Disabled\r\n");
             }
 
             resetUserInput(&userInput);
@@ -200,8 +191,6 @@ int main(void)
         else if(userInput.endOfString && isCommand(&userInput, "print", 1))
         {
             displayTableContents();
-
-            putsUart0("  pending table\r\n");
 
             resetUserInput(&userInput);
         }

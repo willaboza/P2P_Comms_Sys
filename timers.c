@@ -45,17 +45,22 @@ void tickIsr()
     uint8_t i;
     for(i = 0; i < NUM_TIMERS; i++)
     {
-        if((table[i].backoff != 0) && table[i].validBit && (table[i].retries != 0))
+        if((table[i].backoff != 0) && table[i].validBit && (table[i].retries > 0))
         {
             table[i].backoff--;
-            // If validBit = 1 && backoff = 0 can start to send message
+            // If valid bit is 1 and backoff is 0 can start to send message
             if(table[i].backoff == 0)
             {
                 char str[50];
                 messageInProgress = i;
+
                 // "Prime the Pump" here
                 if(UART1_FR_R & UART_FR_TXFE)
                 {
+                    // When Checksum set flash RED_LED
+                    TX_FLASH_TIMEOUT = 1000;
+                    setPinValue(RED_LED, 1);
+
                     sprintf(str, "  Transmitting Msg %u, Attempt %u\r\n", table[i].seqId, ++table[i].attempts);
                     sendUart0String(str);
                     sendPacket(messageInProgress);
@@ -68,19 +73,9 @@ void tickIsr()
          TX_FLASH_TIMEOUT--;
          if(TX_FLASH_TIMEOUT == 0)
          {
-             setPinValue(RED_LED, TX_FLASH_LED = 0); // Turn LED OFF
+             setPinValue(RED_LED, 0); // Turn LED OFF
          }
      }
-    /*
-    if(RX_FLASH_TIMEOUT > 0)
-    {
-        RX_FLASH_TIMEOUT--;
-        if(RX_FLASH_TIMEOUT == 0)
-        {
-            setPinValue(GREEN_LED, RX_FLASH_LED = 0); // Turn LED OFF
-        }
-    }
-     */
     TIMER4_ICR_R = TIMER_ICR_TATOCINT;
 }
 

@@ -71,6 +71,7 @@ extern uint8_t BACKOFF_ATTEMPTS;
 extern uint8_t seqId;
 extern uint8_t messageInProgress;
 extern uint8_t sum;
+extern bool GREEN_LED_FLASH;
 
 bool packetIsUnicast(uint8_t packet[]);
 bool ackIsRequired(uint8_t packet[]);

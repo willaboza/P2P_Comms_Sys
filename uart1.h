@@ -22,6 +22,7 @@
 #define UART1_RX PORTB,0
 
 extern uint16_t rxPhase;
+extern uint16_t lastSequenceId;
 
 void initUart1();
 void setUart1BaudRate(uint32_t baudRate, uint32_t fcyc);
