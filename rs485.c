@@ -57,26 +57,9 @@ void getNextSeqID()
     seqId = (seqId + 1) % 256;
 }
 
-// When received from PC; where A is the address, C is the Channel, and V is
-// the value, a set command shall be sent
-void setACV(uint8_t address, uint8_t channel, char c[])
+// Function determines whether to add ACK bit to ackCmd field of message
+void addAckFlag(uint8_t index)
 {
-    int i;
-    uint8_t index;
-    char str[50];
-
-    index = messageInProgress = findEmptySlot();
-
-    table[index].dstAdd = address;
-    table[index].ackCmd = 0x00; // Set Command is 0x00h
-    table[index].attempts = 0;
-
-    // Set Sequence ID for Message
-    table[index].seqId = (uint8_t)random32(); // Set Sequence ID for Message
-
-    sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
-    sendUart0String(str);
-
     if(ackFlagSet)
     {
         table[index].ackCmd = (table[index].ackCmd | 0x80); // Add Ack flag to (MSB) to the field
@@ -86,39 +69,42 @@ void setACV(uint8_t address, uint8_t channel, char c[])
     {
         table[index].retries = 1; // Set retries to 1 when ACK flag NOT set
     }
+}
 
+// When received from PC; where A is the address, C is the Channel, and V is
+// the value, a set command shall be sent
+void setACV(uint8_t address, uint8_t channel, uint8_t value)
+{
+    uint8_t index;
+    char str[50];
+
+    index = messageInProgress = findEmptySlot();
+
+    // Set Sequence ID for Message
+    table[index].seqId = (uint8_t)random32(); // Set Sequence ID for Message
+
+    sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
+    sendUart0String(str);
+
+    table[index].ackCmd = 0x00; // Set Command is 0x00h
+    addAckFlag(index);
+    table[index].dstAdd = address;
+    table[index].attempts = 0;
     table[index].channel = channel;
-
-    // Clear out data field with all zeros
-    i = 0;
-    while(i < DATA_MAX_SIZE)
-    {
-        table[index].data[i] = 0;
-        i++;
-    }
-    // Add user data
-    i = 0;
-    while(c[i] != '\0')
-    {
-        table[index].data[i] = c[i];
-        i++;
-    }
-
-    table[index].size     = i;
+    table[index].data[0] = value;
+    table[index].size     = 1;
     table[index].phase    = 0;             // Byte to transmit is DST_ADD
     table[index].backoff  = 1;             // Initial backoff value is zero to Tx ASAP
     table[index].checksum = 0;
-    setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
-    table[index].checksum = getChecksum(); // Perform checksum calculations
+    table[index].checksum = getChecksum(index); // Perform checksum calculations
     table[index].validBit = true;          // Ready to Tx data packet
 }
 
 // Function to send a Data Request to a specified Address and Channel
 void getAC(uint8_t address, uint8_t channel)
 {
-    int i;
     uint8_t index;
-    char str[10];
+    char str[50];
 
     index = messageInProgress = findEmptySlot();
 
@@ -128,42 +114,23 @@ void getAC(uint8_t address, uint8_t channel)
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
     sendUart0String(str);
 
-    table[index].dstAdd = address;
     table[index].ackCmd = 0x20; // Data Request Command is 0x20h
-    table[index].attempts = 0;
-    if(ackFlagSet)
-    {
-        table[index].ackCmd = (table[index].ackCmd | 0x80); // Add Ack flag to (MSB) to the field
-        table[index].retries = 4; // Set retries to 4 when ACK flag set
-    }
-    else
-    {
-        table[index].retries = 1; // Set retries to 1 when ACK flag NOT set
-    }
-
+    addAckFlag(index);
     table[index].channel = channel;
-
-    // Clear out data field with all zeros
-    i = 0;
-    while(i < DATA_MAX_SIZE)
-    {
-        table[index].data[i] = 0;
-        i++;
-    }
-
+    table[index].data[0]  = 0;
     table[index].size     = 0;
+    table[index].dstAdd   = address;
+    table[index].attempts = 0;
     table[index].checksum = 0;
-    setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
-    table[index].checksum = getChecksum(); // Perform checksum calculations
-    table[index].phase    = 0;             // Byte to transmit is DST_ADD
-    table[index].backoff  = 1;             // Backoff set
-    table[index].validBit = true; //
+    table[index].checksum = getChecksum(index); // Perform checksum calculations
+    table[index].phase    = 0;                  // Byte to transmit is DST_ADD
+    table[index].backoff  = 1;                  // Backoff set
+    table[index].validBit = true;
 }
 
 // Function to send a Poll Request
 void poll()
 {
-    int i;
     uint16_t index = 0;
     char str[50];
 
@@ -178,21 +145,18 @@ void poll()
     table[index].dstAdd   = 0xFF;
     table[index].attempts = 0;
     table[index].ackCmd   = 0x78; // Send a Poll Request
-    table[index].retries  = 1;   // Set retries to 4 when ACK flag set
+    table[index].retries  = 1;    // Set retries to 4 when ACK flag set
     table[index].channel  = 0;
     table[index].size     = 0;
-    table[index].checksum = 0;
-    setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
-    table[index].checksum = getChecksum(); // Perform checksum calculations
-    table[index].phase    = 0;             // Byte to transmit is DST_ADD
-    table[index].backoff  = 1;             // Backoff set to 500 milliseconds
+    table[index].phase    = 0;                  // Byte to transmit is DST_ADD
+    table[index].backoff  = 1;                  // Backoff set to 500 milliseconds
+    table[index].checksum = getChecksum(index); // Perform checksum calculations
     table[index].validBit = true;
 }
 
 // Function to Set New Address of Node
 void setNewAddress(uint8_t oldAddress, uint8_t newAddress)
 {
-    int i;
     uint8_t index;
     char str[50];
 
@@ -204,37 +168,17 @@ void setNewAddress(uint8_t oldAddress, uint8_t newAddress)
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
     sendUart0String(str);
 
-    table[index].dstAdd = oldAddress;
-    table[index].ackCmd = 0x7A; // Set Command is 0x00h
-    table[index].attempts = 0;
-    if(ackFlagSet)
-    {
-        table[index].ackCmd = (table[index].ackCmd | 0x80); // Add Ack flag to (MSB) to the field
-        table[index].retries = 4;
-    }
-    else
-    {
-        table[index].retries = 1; // Set retries to 1 when ACK flag NOT set
-    }
-
-    table[index].channel = 0;
-
-    // Clear out data field with all zeros
-    i = 0;
-    while(i < DATA_MAX_SIZE)
-    {
-        table[index].data[i] = 0;
-        i++;
-    }
-
-    table[index].data[0] = newAddress;
+    table[index].ackCmd   = 0x7A; // Set Command is 0x00h
+    addAckFlag(index);
+    table[index].channel  = 0;
+    table[index].dstAdd   = oldAddress;
+    table[index].data[0]  = newAddress;
     table[index].size     = 1;
+    table[index].attempts = 0;
     table[index].phase    = 0;             // Byte to transmit is DST_ADD
     table[index].backoff  = 1;             // Initial backoff value is zero to Tx ASAP
-    table[index].checksum = 0;
-    setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
-    table[index].checksum = getChecksum(); // Perform checksum calculations
-    table[index].validBit = true; // Ready to Tx data packet
+    table[index].checksum = getChecksum(index); // Perform checksum calculations
+    table[index].validBit = true;          // Ready to Tx data packet
 }
 
 void sendDataRequest(uint8_t address, uint8_t channel, uint8_t value)
@@ -253,17 +197,8 @@ void sendDataRequest(uint8_t address, uint8_t channel, uint8_t value)
 
     table[index].dstAdd = address;
     table[index].ackCmd = 0x21; // Data Report is 0x21h
+    addAckFlag(index);
     table[index].attempts = 0;
-    if(ackFlagSet)
-    {
-        table[index].ackCmd = (table[index].ackCmd | 0x80); // Add Ack flag to (MSB) to the field
-        table[index].retries = 4;
-    }
-    else
-    {
-        table[index].retries = 1; // Set retries to 1 when ACK flag NOT set
-    }
-
     table[index].channel = channel;
 
     // Clear out data field with all zeros
@@ -275,22 +210,21 @@ void sendDataRequest(uint8_t address, uint8_t channel, uint8_t value)
     }
 
     table[index].data[0]  = value;
-    table[index].size     = 1;
+    table[index].size     = (i - 1);
     table[index].phase    = 0;             // Byte to transmit is DST_ADD
     table[index].backoff  = 1;             // Initial backoff value is zero to Tx ASAP
     table[index].checksum = 0;
-    setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
-    table[index].checksum = getChecksum(); // Perform checksum calculations
+    table[index].checksum = getChecksum(index); // Perform checksum calculations
     table[index].validBit = true; // Ready to Tx data packet
 }
 
 // Send Request to Node to Reset Device
 void sendReset(uint8_t address)
 {
-    int i;
     uint8_t index;
     char str[50];
 
+    // Find Spot in Pending Table to Queue Message
     index = messageInProgress = findEmptySlot();
 
     // Set Sequence ID for Message
@@ -299,42 +233,23 @@ void sendReset(uint8_t address)
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
     sendUart0String(str);
 
-    table[index].dstAdd = address;
-    table[index].ackCmd = 0x7F; // Data Report is 0x21h
+    table[index].ackCmd = 0x7F; // Reset Command is 0x7Fh
+    addAckFlag(index);
+    table[index].channel  = 0;
+    table[index].data[0]  = 0;
+    table[index].dstAdd   = address;
     table[index].attempts = 0;
-    if(ackFlagSet)
-    {
-        table[index].ackCmd = (table[index].ackCmd | 0x80); // Add Ack flag to (MSB) to the field
-        table[index].retries = 4;
-    }
-    else
-    {
-        table[index].retries = 1; // Set retries to 1 when ACK flag NOT set
-    }
-
-    table[index].channel = 0;
-
-    // Clear out data field with all zeros
-    i = 0;
-    while(i < DATA_MAX_SIZE)
-    {
-        table[index].data[i] = 0;
-        i++;
-    }
-
     table[index].data[0]  = 0;
     table[index].size     = 0;
     table[index].phase    = 0;             // Byte to transmit is DST_ADD
     table[index].backoff  = 1;             // Initial backoff value is zero to Tx ASAP
     table[index].checksum = 0;
-    setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
-    table[index].checksum = getChecksum(); // Perform checksum calculations
+    table[index].checksum = getChecksum(index); // Perform checksum calculations
     table[index].validBit = true; // Ready to Tx data packet
 }
 
 void sendAcknowledge(uint8_t address, uint8_t id)
 {
-    int i;
     uint8_t index;
     char str[50];
 
@@ -351,29 +266,17 @@ void sendAcknowledge(uint8_t address, uint8_t id)
     table[index].attempts = 0;
     table[index].retries = 1;   // Set retries to 1 when ACK flag NOT set
     table[index].channel = 0;
-
-    // Clear out data field with all zeros
-    i = 0;
-    while(i < DATA_MAX_SIZE)
-    {
-        table[index].data[i] = 0;
-        i++;
-    }
-
     table[index].data[0]  = id;
     table[index].size     = 1;
     table[index].phase    = 0;             // Byte to transmit is DST_ADD
     table[index].backoff  = 1;             // Initial backoff value is zero to Tx ASAP
-    table[index].checksum = 0;
-    setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
-    table[index].checksum = getChecksum(); // Perform checksum calculations
+    table[index].checksum = getChecksum(index); // Perform checksum calculations
     table[index].validBit = true; // Ready to Tx data packet
 }
 
 // Function to Send Currently Assigned Address on Poll Request
 void sendPollResponse(uint8_t address)
 {
-    int i;
     uint8_t index;
     char str[50];
 
@@ -382,7 +285,7 @@ void sendPollResponse(uint8_t address)
     // Set Sequence ID for Message
     table[index].seqId = (uint8_t)random32();
 
-    sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
+    sprintf(str, "  Queuing Poll Response %u\r\n", table[index].seqId);
     sendUart0String(str);
 
     table[index].dstAdd   = address;
@@ -394,9 +297,7 @@ void sendPollResponse(uint8_t address)
     table[index].size     = 1;
     table[index].phase    = 0;             // Byte to transmit is DST_ADD
     table[index].backoff  = 1;             // Initial backoff value is zero to Tx ASAP
-    table[index].checksum = 0;
-    setPacketFrame(index);                 // Set values in packetFrame for checksum calculations
-    table[index].checksum = getChecksum(); // Perform checksum calculations
+    table[index].checksum = getChecksum(index); // Perform checksum calculations
     table[index].validBit = true; // Ready to Tx data packet
 }
 
@@ -414,13 +315,15 @@ void sendPacket(uint8_t index)
     {
         // Tx DESTINATION ADDRESS
         case 0:
+            UART1_LCRH_R &= ~(UART_LCRH_EPS);
             setPinValue(DRIVER_ENABLE, 1);    // Turn ON Driver Enable (DE) for RS-485 to Tx
             UART1_DR_R = table[index].dstAdd; // Transmit destination address
             table[index].phase = 1;
-            UART1_LCRH_R |= UART_LCRH_EPS;    // Turn ON EPS before Tx all bytes except Destination Address
+            UART1_LCRH_R |= UART_LCRH_EPS;
             break;
         // Tx SOURCE_ADDRESS
         case 1:
+            // UART1_LCRH_R |= UART_LCRH_EPS;
             UART1_DR_R = SOURCE_ADDRESS;
             table[index].phase = 2;
             break;
@@ -448,23 +351,22 @@ void sendPacket(uint8_t index)
         default:
             if(phase < size) // Tx Data
             {
-                UART1_DR_R = (table[phase-7].dstAdd); // Subtract by 7 to set initial data stored in array at index = 0
+                UART1_DR_R = (table[index].data[phase-6]); // Subtract by 6 to set initial data stored in array at index = 0
                 table[index].phase++; // increment phase
             }
             else if(phase == size) // Tx Checksum
             {
                 UART1_DR_R = table[index].checksum;
-                table[index].retries--; // Decrement Tx retries remaining
-                table[index].phase = 0; // Set phase = 0 after Tx checksum
 
                 while(UART1_FR_R & UART_FR_BUSY);  // Wait until UART is not busy before proceeding
-
-                UART1_ICR_R = 0xFFFFFFFF;
-
+                UART1_LCRH_R &= ~(UART_LCRH_EPS);
                 setPinValue(DRIVER_ENABLE, 0);     // Turn OFF Driver Enable (DE) on RS-485
 
+                table[index].retries--;            // Decrement Tx retries remaining
+                table[index].phase++;              // Set phase = 0 after Tx checksum
+
                 // If ACK Requested and MAX_ReTransmissions sent w/out ACK send error msg to PC
-                if((table[index].retries == 0) && (table[index].ackCmd & 0x80)) //
+                if((table[index].retries == 0) && ((table[index].ackCmd & 0x80) == 0x80)) //
                 {
                     char str[50];
 
@@ -476,13 +378,14 @@ void sendPacket(uint8_t index)
                     sendUart0String(str);
                 }
 
-                if(table[index].retries == 0) // Delete message from Tx Queue
+                if(table[index].retries > 0) // Delete message from Tx Queue
                 {
-                    table[index].validBit = false; // Set valid bit to false as finished transmitting the packet
+                    table[index].phase = 0;   // Set phase = 0 after Tx checksum
+                    table[index].backoff = calcNewBackoff(table[index].attempts);
                 }
                 else
                 {
-                    table[index].backoff = calcNewBackoff(table[index].attempts);
+                    table[index].validBit = false; // Set valid bit to false as finished transmitting the packet
                 }
             }
     }
@@ -528,23 +431,41 @@ void setPacketFrame(uint8_t index)
 
 // Calculate sum of words
 // Must use getChecksum to complete 1's compliment addition
-void sumWords(void* data, uint16_t sizeInBytes)
+void sumWords()
 {
-    uint8_t* pData = (uint8_t*)data;
-    uint16_t i;
-    for (i = 0; i < sizeInBytes; i++)
+    int i;
+    sum = 0;
+
+    sum = rxInfo.dstAdd;
+    sum += rxInfo.srcAdd;
+    sum += rxInfo.seqId;
+    sum += rxInfo.ackCmd;
+    sum += rxInfo.channel;
+    sum += rxInfo.size;
+
+    for(i = 0; i < rxInfo.size; i++)
     {
-        sum += *pData++;
+        sum += rxInfo.data[i];
     }
 }
 // Completes 1's compliment addition by folding carries back into field
-uint8_t getChecksum()
+uint8_t getChecksum(uint8_t index)
 {
+    int i;
     uint8_t tmp8;
     sum = 0;
 
-    sumWords(&txInfo.dstAdd, 6);
-    sumWords(&txInfo.data, txInfo.size);
+    sum = table[index].dstAdd;
+    sum += SOURCE_ADDRESS;
+    sum += table[index].seqId;
+    sum += table[index].ackCmd;
+    sum += table[index].channel;
+    sum += table[index].size;
+
+    for(i = 0; i < table[index].size; i++)
+    {
+        sum += table[index].data[i];
+    }
 
     tmp8 = ~(sum);
 
@@ -579,7 +500,7 @@ void ackReceived()
 void takeAction()
 {
     uint8_t command, channel, value;
-    char str[50];
+    char str[80];
 
     command = (rxInfo.ackCmd & 0x7F); // Mask Bits to remove ACK if set
 
@@ -637,6 +558,8 @@ void takeAction()
             SOURCE_ADDRESS = rxInfo.data[0];
             writeEeprom(0x0000, SOURCE_ADDRESS); // Store New Address in EEPROM
             srand(SOURCE_ADDRESS);
+            sprintf(str, "  New Address is %u\r\n", SOURCE_ADDRESS);
+            sendUart0String(str);
             break;
 
         // Node Control
@@ -665,8 +588,12 @@ void takeAction()
 void displayTableContents()
 {
     int i, j;
-    char str[10];
+    char str[50];
 
+    sprintf(str, "  Current Address is %02u\r\n", SOURCE_ADDRESS);
+    sendUart0String(str);
+
+    /*
     for (i = 0; i < 10; i++)
     {
         putsUart0("[");
@@ -699,4 +626,5 @@ void displayTableContents()
         putsUart0(str);
         putsUart0("]\r\n");
     }
+    */
 }

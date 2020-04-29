@@ -104,7 +104,7 @@ void sendUart0String(char str[])
         }
     }
 
-    UART0_ICR_R = 0xFFF;
+    UART0_ICR_R = 0x00000FFF;
     // Check to see if UART Tx holding register is empty
     if(UART0_FR_R & UART_FR_TXFE  && !(emptyRingBuffer()))
     {

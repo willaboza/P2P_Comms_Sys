@@ -51,7 +51,7 @@ void tickIsr()
             // If valid bit is 1 and backoff is 0 can start to send message
             if(table[i].backoff == 0)
             {
-                char str[50];
+                char str[80];
                 messageInProgress = i;
 
                 // "Prime the Pump" here

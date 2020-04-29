@@ -8,8 +8,6 @@
 #include "uart1.h"
 
 uint16_t rxPhase = 0;
-bool transmitState = 0;
-uint16_t lastSequenceId = 500;
 
 // Initialize UART1
 void initUart1()
@@ -53,49 +51,46 @@ void setUart1BaudRate(uint32_t baudRate, uint32_t fcyc)
 // Implement the ISR for UART1
 void uart1Isr()
 {
-
-    // Check to see if UART Tx  register is empty and TXMIS bit set in MIS register
-    if((UART1_FR_R & UART_FR_TXFE) && (UART1_MIS_R & UART_MIS_TXMIS))
-    {
-        // Writing a 1 to the bits in this register clears
-        // the bits in the UARTRIS and UARTMIS registers.
-        UART1_ICR_R = 0xFFFFFFFF;
-
-        if(table[messageInProgress].phase == 0)
-        {
-            UART1_LCRH_R &= ~(UART_LCRH_EPS); // Turn OFF EPS before Tx dstAdd, sets parity bit = 1
-        }
-
-        // Transmit next byte of packet
-        sendPacket(messageInProgress);
-    }
-
     // Check to see if Rx is NOT empty && whether transmitting data
     if(!(UART1_FR_R & UART_FR_RXFE) && (UART1_MIS_R & UART_MIS_RXMIS))
     {
         uint8_t data;
 
-        data = UART1_DR_R; // Read data received on UART1
-
         // Check if Parity = 1 for received data by using XOR of EPS and PE bits
+        // if((UART1_LCRH_R & UART_LCRH_EPS) ^ (UART1_DR_R & UART_DR_PE))
         if(UART1_DR_R & UART_DR_PE)
         {
             UART1_LCRH_R |= UART_LCRH_EPS;
             rxPhase = 0; // Destination Address Rx'd so set phase = 0
         }
 
+        data = UART1_DR_R; // Read data received on UART1
+
+
         processRxPacket(data);
 
         // Clear Interrupts and Errors
-        UART1_ECR_R = 0;
-        UART1_ICR_R = 0xFFFFFFFF;
+        UART1_ECR_R = 0xF;
+        UART1_ICR_R = 0xFFFF;
+    }
+    // Check to see if UART Tx  register is empty and TXMIS bit set in MIS register
+    if((UART1_FR_R & UART_FR_TXFE) && (UART1_MIS_R & UART_MIS_TXMIS))
+    {
+        // Writing a 1 to the bits in this register clears
+        // the bits in the UARTRIS and UARTMIS registers.
+        UART1_ICR_R = 0xFFFF;
+
+        if(table[messageInProgress].phase <= (table[messageInProgress].size + 6))
+        {
+            // Transmit next byte of packet
+            sendPacket(messageInProgress);
+        }
     }
 }
 
 // Function stores received bytes in appropriate field of packet
 void processRxPacket(uint8_t data)
 {
-
     switch(rxPhase)
     {
         case 0: // Check if Destination Address is Broadcast or the Address Assigned to the device
@@ -134,35 +129,39 @@ void processRxPacket(uint8_t data)
         default:
             if(rxPhase < (6 + rxInfo.size)) // Process Data
             {
-                rxInfo.data[rxPhase-7] = data; // Subtract by 7 to set initial data stored in array at index = 0
+                rxInfo.data[rxPhase-6] = data; // Subtract by 7 to set initial data stored in array at index = 0
                 rxPhase++; // increment phase
             }
             else if(rxPhase == (6 + rxInfo.size)) // Store Checksum
             {
+                UART1_LCRH_R &= ~(UART_LCRH_EPS);
                 rxInfo.checksum = data;
                 rxPhase++;
             }
 
             if(rxPhase == (6 + 1 + rxInfo.size)) // Verify if Checksum is good
             {
-                sum = 0;
+                uint8_t check;
 
                 // Get sum of bytes for data Rx'd
-                sumWords(&rxInfo.dstAdd, 6);
-                sumWords(&rxInfo.data, rxInfo.size);
+                sumWords();
 
-                data = (sum + rxInfo.checksum); // Sum all fields for Rx'd packet and add with sender's checksum
+                 check = (sum + rxInfo.checksum); // Sum all fields for Rx'd packet and add with sender's checksum
 
                 // If tmp8 = 0xFF then packet Rx'd is valid
-                if(data == 0xFF && (rxInfo.seqId != lastSequenceId))
+                // if(data == 0xFF && (rxInfo.seqId != lastSequenceId))
+                if(check == 0xFF)
                 {
-                    lastSequenceId = rxInfo.seqId;
+                    // lastSequenceId = rxInfo.seqId;
                     takeAction(); // Perform action for Command Rx'd
+                    // rxPhase = 0;
                 }
+                /*
                 else
                 {
                     rxPhase = 0;  // Discard packet if checksum invalid and look for new packet to process
                 }
+                */
             }
     }
 }

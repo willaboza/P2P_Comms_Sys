@@ -76,6 +76,7 @@ int main(void)
     while(true)
     {
         // If User Input detected, then process input
+
         if(kbhitUart0())
         {
             // Get User Input
@@ -88,11 +89,11 @@ int main(void)
         // Perform Command from User Input
         if(userInput.endOfString && isCommand(&userInput, "reset", 2))
         {
-            char *token;
+            uint8_t destAddress;
 
-            token = getFieldInteger(&userInput, 1);
+            destAddress = getFieldInteger(&userInput, 1);
 
-            sendReset(token);
+            sendReset(destAddress);
 
             resetUserInput(&userInput); // Reset Input from User to Rx Next Command
         }
@@ -115,7 +116,7 @@ int main(void)
         }
         else if(userInput.endOfString && isCommand(&userInput, "random", 2))
         {
-            char *token;
+            char token[80];
 
             strcpy(token,getFieldString(&userInput, 1));
 
