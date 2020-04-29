@@ -359,7 +359,9 @@ void sendPacket(uint8_t index)
                 UART1_DR_R = table[index].checksum;
 
                 while(UART1_FR_R & UART_FR_BUSY);  // Wait until UART is not busy before proceeding
+
                 UART1_LCRH_R &= ~(UART_LCRH_EPS);
+
                 setPinValue(DRIVER_ENABLE, 0);     // Turn OFF Driver Enable (DE) on RS-485
 
                 table[index].retries--;            // Decrement Tx retries remaining
@@ -407,26 +409,6 @@ uint8_t findEmptySlot()
         i++;
     }
     return tmp8;
-}
-
-// Fill out Packet Frame for Transmitting
-void setPacketFrame(uint8_t index)
-{
-    int i;
-
-    txInfo.dstAdd  = table[index].dstAdd;
-    txInfo.srcAdd  = SOURCE_ADDRESS;
-    txInfo.seqId   = table[index].seqId;
-    txInfo.ackCmd  = table[index].ackCmd;
-    txInfo.channel = table[index].channel;
-    txInfo.size    = table[index].size;
-
-    for(i = 0; i < txInfo.size; i++)
-    {
-        txInfo.data[i] = table[index].data[i];
-    }
-
-    txInfo.checksum = table[index].checksum;
 }
 
 // Calculate sum of words
@@ -534,7 +516,8 @@ void takeAction()
 
         // ACK Command
         case 0x70:
-            sendUart0String("  Acknowledge\r\n");
+            sprintf(str, "  ACK Received for Msg %02 u\r\n", rxInfo.seqId);
+            sendUart0String(str);
             ackReceived(); // Check for seqId match
             break;
 
@@ -587,44 +570,8 @@ void takeAction()
 // Function to Display to Terminal Contents of the Pending Table
 void displayTableContents()
 {
-    int i, j;
     char str[50];
 
     sprintf(str, "  Current Address is %02u\r\n", SOURCE_ADDRESS);
     sendUart0String(str);
-
-    /*
-    for (i = 0; i < 10; i++)
-    {
-        putsUart0("[");
-        sprintf(str, "[%02u] ", table[i].validBit);
-        putsUart0(str);
-        sprintf(str, "[%02u] ", table[i].seqId);
-        putsUart0(str);
-        sprintf(str, "[%02u] ", table[i].dstAdd);
-        putsUart0(str);
-        sprintf(str, "[%02u] ", table[i].seqId);
-        putsUart0(str);
-        sprintf(str, "[%02u] ", table[i].ackCmd);
-        putsUart0(str);
-        sprintf(str, "[%02u] ", table[i].channel);
-        putsUart0(str);
-        sprintf(str, "[%02u] ", table[i].size);
-        putsUart0(str);
-        sprintf(str, "[%02u] ", table[i].ackCmd);
-        putsUart0(str);
-        putsUart0("[");
-        for(j = 0; j < DATA_MAX_SIZE; j++)
-        {
-            sprintf(str, "[%02u] ", table[i].data[j]);
-            putsUart0(str);
-        }
-        putsUart0("] ");
-        sprintf(str, "[%02u] ", table[i].checksum);
-        putsUart0(str);
-        sprintf(str, "[%02u]", table[i].retries);
-        putsUart0(str);
-        putsUart0("]\r\n");
-    }
-    */
 }

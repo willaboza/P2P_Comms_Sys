@@ -88,7 +88,6 @@ void sendPollResponse(uint8_t address);
 void sumWords();
 void sendPacket(uint8_t index);
 void displayTableContents();
-void setPacketFrame(uint8_t index);
 uint8_t getChecksum(uint8_t index);
 uint8_t findEmptySlot();
 void takeAction();
