@@ -8,6 +8,7 @@
 #include "uart1.h"
 
 uint16_t rxPhase = 0;
+uint16_t lastSequenceId = 500;
 
 // Initialize UART1
 void initUart1()
@@ -57,7 +58,7 @@ void uart1Isr()
         uint8_t data;
 
         // Flash GREEN_LED On Receipt of Byte
-        RX_FLASH_TIMEOUT++;
+        RX_FLASH_TIMEOUT = 5;
         setPinValue(GREEN_LED, 1);
 
 
@@ -153,20 +154,25 @@ void processRxPacket(uint8_t data)
 
                  check = (sum + rxInfo.checksum); // Sum all fields for Rx'd packet and add with sender's checksum
 
-                // If tmp8 = 0xFF then packet Rx'd is valid
-                // if(data == 0xFF && (rxInfo.seqId != lastSequenceId))
-                if(check == 0xFF)
+                // If check = 0xFF then packet Rx'd is valid
+                if(check == 0xFF && (rxInfo.seqId != lastSequenceId))
                 {
+                    lastSequenceId = rxInfo.seqId;
+
+                    if(rxInfo.ackCmd == 0x70)
+                    {
+                        ackReceived(); // Check for seqId match
+                    }
+
+                    // Send Acknowledge to Message if ACK bit i set
+                    if((rxInfo.ackCmd & 0x80) == 0x80)
+                    {
+                        sendAcknowledge(rxInfo.srcAdd, rxInfo.seqId);
+                    }
+
                     // lastSequenceId = rxInfo.seqId;
                     takeAction(); // Perform action for Command Rx'd
-                    // rxPhase = 0;
                 }
-                /*
-                else
-                {
-                    rxPhase = 0;  // Discard packet if checksum invalid and look for new packet to process
-                }
-                */
             }
     }
 }

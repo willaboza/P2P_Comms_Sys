@@ -73,7 +73,6 @@ extern uint8_t messageInProgress;
 extern uint8_t sum;
 extern bool GREEN_LED_FLASH;
 
-bool ackIsRequired(uint8_t packet[]);
 void getNextSeqID();
 void addAckFlag(uint8_t index);
 void setACV(uint8_t address, uint8_t channel, uint8_t value);
@@ -90,5 +89,6 @@ void displayTableContents();
 uint8_t getChecksum(uint8_t index);
 uint8_t findEmptySlot();
 void takeAction();
+void ackReceived();
 
 #endif /* RS485_H_ */

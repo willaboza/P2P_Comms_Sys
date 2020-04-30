@@ -45,7 +45,7 @@ void tickIsr()
     uint8_t i;
     for(i = 0; i < NUM_TIMERS; i++)
     {
-        if((table[i].backoff != 0) && table[i].validBit && (table[i].retries > 0))
+        if((table[i].backoff != 0) && table[i].validBit)
         {
             table[i].backoff--;
             // If valid bit is 1 and backoff is 0 can start to send message
@@ -54,31 +54,48 @@ void tickIsr()
                 char str[80];
                 messageInProgress = i;
 
-                // "Prime the Pump" here
-                if(UART1_FR_R & UART_FR_TXFE)
+                if((table[i].retries > 0) && (table[i].validBit == true) && (UART1_FR_R & UART_FR_TXFE)) // "Prime the Pump" here
                 {
                     sprintf(str, "  Transmitting Msg %u, Attempt %u\r\n", table[i].seqId, ++table[i].attempts);
                     sendUart0String(str);
                     sendPacket(messageInProgress);
                 }
+
+                // If ACK Flag set and Retries = 0 then output error message
+                if((table[i].retries == 0) && ((table[i].ackCmd & 0x80) == 0x80))
+                {
+                    // When Checksum set flash RED_LED
+                    TX_FLASH_TIMEOUT = 10000;
+                    setPinValue(RED_LED, 1);
+
+                    sprintf(str, "  Error Sending Msg %u\r\n", table[i].seqId);
+                    sendUart0String(str);
+
+                    // Set Msg for Removal
+                    table[i].validBit = false;
+                }
+                else if(table[i].retries == 0 && ((table[i].ackCmd & 0x80) != 0x80)) // If ACK command not set then set valid bit to false
+                {
+                    table[i].validBit = false; // Set valid bit to false as finished transmitting the packet
+                }
             }
         }
     }
     if(TX_FLASH_TIMEOUT > 0)
-     {
-         TX_FLASH_TIMEOUT--;
-         if(TX_FLASH_TIMEOUT == 0)
-         {
-             setPinValue(RED_LED, 0); // Turn LED OFF
-         }
-     }
+    {
+        TX_FLASH_TIMEOUT--;
+        if(TX_FLASH_TIMEOUT == 0)
+        {
+            setPinValue(RED_LED, 0); // Turn LED OFF
+        }
+    }
     if(RX_FLASH_TIMEOUT > 0)
-     {
-         RX_FLASH_TIMEOUT--;
-         if(RX_FLASH_TIMEOUT == 0)
-         {
-             setPinValue(GREEN_LED, 0); // Turn LED OFF
-         }
+    {
+        RX_FLASH_TIMEOUT--;
+        if(RX_FLASH_TIMEOUT == 0)
+        {
+            setPinValue(GREEN_LED, 0); // Turn LED OFF
+        }
      }
     TIMER4_ICR_R = TIMER_ICR_TATOCINT;
 }
@@ -86,17 +103,18 @@ void tickIsr()
 // Calculate New BACKOFF_MS for pending table
 uint32_t calcNewBackoff(uint8_t exponent)
 {
-    uint32_t num, tmp32;
-
-    tmp32 = (calcPower(exponent - 1) * BACKOFF_BASE_NUMBER); // Calculates the value for 2^(n-1)
+    uint32_t num, offset;
+    uint8_t random;
+    offset = (calcPower(exponent - 1) * BACKOFF_BASE_NUMBER); // Calculates the value for 2^(n-1)
 
     if(randomFlag) // Returns new backoff value when random flag is set
     {
-        num = BACKOFF_BASE_NUMBER + (rand() * tmp32);
+        random = rand();
+        num = BACKOFF_BASE_NUMBER + (uint32_t)(((float)random/255) * (float)offset);
     }
     else // Returns new backoff value when random flag is NOT set
     {
-        num = BACKOFF_BASE_NUMBER + tmp32;
+        num = BACKOFF_BASE_NUMBER + offset;
     }
     return num;
 }

@@ -10,8 +10,6 @@
 bool carrierSenseFlag      = false;
 bool ackFlagSet            = false;
 bool randomFlag            = false;
-bool GREEN_LED_FLASH       = 0;
-bool RED_LED_STATE         = 0;
 uint8_t SOURCE_ADDRESS     = 1;
 uint8_t BACKOFF_ATTEMPTS   = 4;
 uint8_t seqId              = 0;
@@ -21,16 +19,6 @@ uint8_t sum                = 0;
 packetFrame txInfo = {0};
 packetFrame rxInfo = {0};
 pendingTable table[MAX_TABLE_SIZE] = {0};
-
-// Determines if packet received requires an ACK to be sent back to sender
-bool ackIsRequired(uint8_t packet[])
-{
-    packetFrame* info = (packetFrame*)packet;
-    bool ok = false;
-    if(((info->dstAdd >> 7) & 0xFF) == 0x01) // Shift bits right by 7 and then apply mask
-        ok = true;
-    return ok;
-}
 
 // Function to get Next Sequence ID
 void getNextSeqID()
@@ -43,7 +31,7 @@ void addAckFlag(uint8_t index)
 {
     if(ackFlagSet)
     {
-        table[index].ackCmd = (table[index].ackCmd | 0x80); // Add Ack flag to (MSB) to the field
+        table[index].ackCmd  |= 0x80; // Add Ack flag to (MSB) to the field
         table[index].retries = 4;
     }
     else
@@ -67,12 +55,12 @@ void setACV(uint8_t address, uint8_t channel, uint8_t value)
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
     sendUart0String(str);
 
-    table[index].ackCmd = 0x00; // Set Command is 0x00h
+    table[index].ackCmd   = 0x00; // Set Command is 0x00h
     addAckFlag(index);
-    table[index].dstAdd = address;
+    table[index].dstAdd   = address;
     table[index].attempts = 0;
-    table[index].channel = channel;
-    table[index].data[0] = value;
+    table[index].channel  = channel;
+    table[index].data[0]  = value;
     table[index].size     = 1;
     table[index].phase    = 0;             // Byte to transmit is DST_ADD
     table[index].backoff  = 1;             // Initial backoff value is zero to Tx ASAP
@@ -95,9 +83,9 @@ void getAC(uint8_t address, uint8_t channel)
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
     sendUart0String(str);
 
-    table[index].ackCmd = 0x20; // Data Request Command is 0x20h
+    table[index].ackCmd   = 0x20; // Data Request Command is 0x20h
     addAckFlag(index);
-    table[index].channel = channel;
+    table[index].channel  = channel;
     table[index].data[0]  = 0;
     table[index].size     = 0;
     table[index].dstAdd   = address;
@@ -242,11 +230,11 @@ void sendAcknowledge(uint8_t address, uint8_t id)
     sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
     sendUart0String(str);
 
-    table[index].dstAdd = address;
-    table[index].ackCmd = 0x70; // Data Report is 0x21h
+    table[index].dstAdd   = address;
+    table[index].ackCmd   = 0x70; // Data Report is 0x21h
     table[index].attempts = 0;
-    table[index].retries = 1;   // Set retries to 1 when ACK flag NOT set
-    table[index].channel = 0;
+    table[index].retries  = 1;   // Set retries to 1 when ACK flag NOT set
+    table[index].channel  = 0;
     table[index].data[0]  = id;
     table[index].size     = 1;
     table[index].phase    = 0;             // Byte to transmit is DST_ADD
@@ -266,20 +254,20 @@ void sendPollResponse(uint8_t address)
     // Set Sequence ID for Message
     table[index].seqId = (uint8_t)random32();
 
-    sprintf(str, "  Queuing Poll Response %u\r\n", table[index].seqId);
+    sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
     sendUart0String(str);
 
     table[index].dstAdd   = address;
-    table[index].ackCmd   = 0x79;  // Poll Response is 0x79h
+    table[index].ackCmd   = 0x79;               // Poll Response is 0x79h
     table[index].attempts = 0;
-    table[index].retries  = 1;   // Set retries to 1 when ACK flag NOT set
+    table[index].retries  = 1;                  // Set retries to 1 when ACK flag NOT set
     table[index].channel  = 0;
     table[index].data[0]  = SOURCE_ADDRESS;
     table[index].size     = 1;
-    table[index].phase    = 0;             // Byte to transmit is DST_ADD
-    table[index].backoff  = 1;             // Initial backoff value is zero to Tx ASAP
+    table[index].phase    = 0;                  // Byte to transmit is DST_ADD
+    table[index].backoff  = 1;                  // Initial backoff value is zero to Tx ASAP
     table[index].checksum = getChecksum(index); // Perform checksum calculations
-    table[index].validBit = true; // Ready to Tx data packet
+    table[index].validBit = true;               // Ready to Tx data packet
 }
 
 // Check to see if Tx FIFO EMPTY.
@@ -290,7 +278,7 @@ void sendPacket(uint8_t index)
     uint16_t size, phase;
 
     // Flash RED_LED when TX Byte
-    TX_FLASH_TIMEOUT++;
+    TX_FLASH_TIMEOUT = 5;
     setPinValue(RED_LED, 1);
 
     size = table[index].size + 6; // Size of data packet
@@ -352,27 +340,14 @@ void sendPacket(uint8_t index)
                 table[index].retries--;            // Decrement Tx retries remaining
                 table[index].phase++;              // Set phase = 0 after Tx checksum
 
-                // If ACK Requested and MAX_ReTransmissions sent w/out ACK send error msg to PC
-                if((table[index].retries == 0) && ((table[index].ackCmd & 0x80) == 0x80)) //
-                {
-                    char str[50];
-
-                    // When Checksum set flash RED_LED
-                    TX_FLASH_TIMEOUT = 1000;
-                    setPinValue(RED_LED, 1);
-
-                    sprintf(str, "  Error Sending Msg %u\r\n", table[index].seqId);
-                    sendUart0String(str);
-                }
-
-                if(table[index].retries > 0) // Delete message from Tx Queue
+                if(((table[index].ackCmd & 0x80) == 0x80)) // Delete message from Tx Queue
                 {
                     table[index].phase = 0;   // Set phase = 0 after Tx checksum
                     table[index].backoff = calcNewBackoff(table[index].attempts);
                 }
-                else
+                else if(((table[index].ackCmd & 0x80) != 0x80))
                 {
-                    table[index].validBit = false; // Set valid bit to false as finished transmitting the packet
+                    table[index].backoff = BACKOFF_BASE_NUMBER;
                 }
             }
     }
@@ -455,9 +430,11 @@ void ackReceived()
     i = 0;
     while((i < MAX_TABLE_SIZE) && ok)
     {
-        if(table[i].seqId == rxInfo.seqId)
+        if(table[i].seqId == rxInfo.data[0])
         {
             table[i].validBit = 0;
+            table[i].backoff  = 0;
+            table[i].retries  = 0;
             ok = false;
         }
         i++;
@@ -476,34 +453,25 @@ void takeAction()
         // Set Command
         case 0x00:
             sendUart0String("  Set\r\n");
-            if(ackFlagSet)
-            {
-                sendAcknowledge(rxInfo.srcAdd, rxInfo.seqId);
-            }
             channel = rxInfo.channel;
             value   = rxInfo.data[0]; // DATA argument for set should be size 1
             break;
 
         // Pulse Command
         case 0x20:
-            if(ackFlagSet)
-            {
-                sendAcknowledge(rxInfo.srcAdd, rxInfo.seqId);
-            }
             sendDataRequest(rxInfo.srcAdd, rxInfo.channel, getChannelValue());
             break;
 
         // Data Request
         case 0x21:
-            sprintf(str, "  Status = %02u for Channel %02u at Add = %02u\r\n", rxInfo.data[0], rxInfo.channel, rxInfo.dstAdd);
+            sprintf(str, "  Status = %2u for Channel %2u at Add = %02u\r\n", rxInfo.data[0], rxInfo.channel, rxInfo.dstAdd);
             sendUart0String(str);
             break;
 
         // ACK Command
         case 0x70:
-            sprintf(str, "  ACK Received for Msg %02 u\r\n", rxInfo.seqId);
+            sprintf(str, "  ACK Received for Msg %u\r\n", rxInfo.data[0]);
             sendUart0String(str);
-            ackReceived(); // Check for seqId match
             break;
 
         // Poll Request
@@ -513,16 +481,12 @@ void takeAction()
 
         // Poll Response
         case 0x79:
-            sprintf(str, "  Address %02u Responded\r\n", rxInfo.data[0]);
+            sprintf(str, "  Address %u Responded\r\n", rxInfo.data[0]);
             sendUart0String(str);
             break;
 
         // Set Address
         case 0x7A:
-            if(ackFlagSet)
-            {
-                sendAcknowledge(rxInfo.srcAdd, rxInfo.seqId);
-            }
             SOURCE_ADDRESS = rxInfo.data[0];
             writeEeprom(0x0000, SOURCE_ADDRESS); // Store New Address in EEPROM
             srand(SOURCE_ADDRESS);

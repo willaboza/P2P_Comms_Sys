@@ -20,7 +20,7 @@
 #include "rs485.h"
 
 #define NUM_TIMERS 10
-#define BACKOFF_BASE_NUMBER 250
+#define BACKOFF_BASE_NUMBER 500
 
 extern uint32_t TX_FLASH_TIMEOUT;
 extern uint32_t RX_FLASH_TIMEOUT;

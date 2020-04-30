@@ -5,7 +5,7 @@
  *      Author: willi
  */
 
-#include 'pwm0.h'
+#include "pwm0.h"
 
 void initPwm0()
 {
@@ -23,7 +23,7 @@ void initPwm0()
     selectPinPushPullOutput(PWM0_RED_LED);
     selectPinDigitalInput(PWM0_BLUE_LED);
     selectPinDigitalInput(PWM0_GREEN_LED);
-
+/*
     setPinAuxFunction(PWM0_RED_LED, GPIO_PCTL_PB5_PWM0);
     setPinAuxFunction(PWM0_BLUE_LED, GPIO_PCTL_PE4_PWM0);
     setPinAuxFunction(PWM0_GREEN_LED, GPIO_PCTL_PE5_PWM0);
@@ -47,8 +47,7 @@ void initPwm0()
     PWM0_1_CTL_R = PWM_0_CTL_ENABLE;                 // turn-on PWM0 generator 1
     PWM0_2_CTL_R = PWM_0_CTL_ENABLE;                 // turn-on PWM0 generator 2
     PWM0_ENABLE_R = PWM_ENABLE_PWM3EN | PWM_ENABLE_PWM4EN | PWM_ENABLE_PWM5EN;// enable outputs
-
-
+*/
 }
 
 //Set Red,Green,and Blue LED Colors
@@ -65,16 +64,20 @@ void setRgbColor(uint16_t red, uint16_t green, uint16_t blue)
 // Result = ((Input - Input_Low)/(Input_High - Input_Low)) * (Output_High - Output_low) + Output_Low
 int normalizeRgbColor(int measurement)
 {
-    uint16 result;
+    uint16_t result;
     float numerator, denominator, ratio;
+    char str[50];
 
+    sprintf(str, "  %u.0\0", measurement);
+    sendUart0String(str);
+    /*
     snprintf(buffer, sizeof(buffer), "%u.0\0",measurement);
     numerator = atof(buffer);
     snprintf(buffer, sizeof(buffer), "%u.0\0",threshold);
     denominator = atof(buffer);
     ratio = (numerator/denominator) * 255.0;
     result = ratio;
-
+    */
     if(result > 255)
     {
         result = 255;

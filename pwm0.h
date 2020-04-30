@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "tm4c123gh6pm.h"
+#include "gpio.h"
 
 #define MAX_PWM 1023
 

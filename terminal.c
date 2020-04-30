@@ -164,7 +164,6 @@ void printMainMenu()
 {
     sendUart0String("Commands:\r\n");
     sendUart0String("  reset A\r\n");
-    sendUart0String("  cs ON|OFF\r\n");
     sendUart0String("  random ON|OFF\r\n");
     sendUart0String("  set A C V\r\n");
     sendUart0String("  get A C\r\n");

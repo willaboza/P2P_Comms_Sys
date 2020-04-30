@@ -12,7 +12,6 @@
 #include "uart1.h"
 #include "reboot.h"
 #include "terminal.h"
-#include "wait.h"
 #include "gpio.h"
 #include "rs485.h"
 #include "timers.h"
@@ -53,12 +52,6 @@ int main(void)
 
     // Setup UART1 Baud Rate
     setUart1BaudRate(38400, 40e6);
-
-    // Flash LED
-    setPinValue(GREEN_LED, 1);
-    waitMicrosecond(100000);
-    setPinValue(GREEN_LED, 0);
-    waitMicrosecond(100000);
 
     // Get current value for SOURCE_ADDRESS
     readEepromAddress();
@@ -123,7 +116,7 @@ int main(void)
             if(strcmp(token, "on") == 0)
             {
                 // Seed Random Function with Unique Address
-                // srand(SOURCE_ADDRESS);
+                srand(SOURCE_ADDRESS);
                 randomFlag = true;
             }
             else if(strcmp(token, "off") == 0)
