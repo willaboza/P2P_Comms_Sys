@@ -73,7 +73,6 @@ extern uint8_t messageInProgress;
 extern uint8_t sum;
 extern bool GREEN_LED_FLASH;
 
-bool packetIsUnicast(uint8_t packet[]);
 bool ackIsRequired(uint8_t packet[]);
 void getNextSeqID();
 void addAckFlag(uint8_t index);

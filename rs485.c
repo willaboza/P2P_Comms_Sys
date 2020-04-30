@@ -11,6 +11,7 @@ bool carrierSenseFlag      = false;
 bool ackFlagSet            = false;
 bool randomFlag            = false;
 bool GREEN_LED_FLASH       = 0;
+bool RED_LED_STATE         = 0;
 uint8_t SOURCE_ADDRESS     = 1;
 uint8_t BACKOFF_ATTEMPTS   = 4;
 uint8_t seqId              = 0;
@@ -20,26 +21,6 @@ uint8_t sum                = 0;
 packetFrame txInfo = {0};
 packetFrame rxInfo = {0};
 pendingTable table[MAX_TABLE_SIZE] = {0};
-
-// Determines if packet received is unicast
-bool packetIsUnicast(uint8_t packet[])
-{
-    packetFrame* info = (packetFrame*)packet;
-    bool ok = false;
-    if(!(info->dstAdd & 0xFF)) // Check if Message is NOT broadcast
-    {
-        ok = true;
-    }
-    if((UART1_LCRH_R & 0xFF) == 0x82 && info->dstAdd == SOURCE_ADDRESS)
-    {
-        ok = true; //
-    }
-    else
-    {
-        ok = false;
-    }
-    return ok;
-}
 
 // Determines if packet received requires an ACK to be sent back to sender
 bool ackIsRequired(uint8_t packet[])
@@ -307,6 +288,10 @@ void sendPollResponse(uint8_t address)
 void sendPacket(uint8_t index)
 {
     uint16_t size, phase;
+
+    // Flash RED_LED when TX Byte
+    TX_FLASH_TIMEOUT++;
+    setPinValue(RED_LED, 1);
 
     size = table[index].size + 6; // Size of data packet
     phase = table[index].phase;   // Store current phase value

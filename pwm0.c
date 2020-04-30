@@ -1,11 +1,11 @@
 /*
- * led.c
+ * pwm0.c
  *
  *  Created on: Apr 29, 2020
  *      Author: willi
  */
 
-#include 'led.h'
+#include 'pwm0.h'
 
 void initPwm0()
 {

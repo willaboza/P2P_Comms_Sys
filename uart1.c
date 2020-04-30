@@ -56,6 +56,11 @@ void uart1Isr()
     {
         uint8_t data;
 
+        // Flash GREEN_LED On Receipt of Byte
+        RX_FLASH_TIMEOUT++;
+        setPinValue(GREEN_LED, 1);
+
+
         // Check if Parity = 1 for received data by using XOR of EPS and PE bits
         // if((UART1_LCRH_R & UART_LCRH_EPS) ^ (UART1_DR_R & UART_DR_PE))
         if(UART1_DR_R & UART_DR_PE)

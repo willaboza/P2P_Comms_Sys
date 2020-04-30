@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-#include <uart0.h>
+#include "uart0.h"
 #include "tm4c123gh6pm.h"
 #include "uart0.h"
 #include "gpio.h"

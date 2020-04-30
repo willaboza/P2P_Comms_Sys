@@ -15,7 +15,7 @@
 #include "uart0.h"
 #include "rs485.h"
 #include "timers.h"
-
+#include "wait.h"
 // Pins
 #define DRIVER_ENABLE PORTB,2
 #define UART1_TX PORTB,1

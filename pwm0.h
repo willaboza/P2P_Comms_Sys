@@ -5,8 +5,8 @@
  *      Author: willi
  */
 
-#ifndef LED_H_
-#define LED_H_
+#ifndef PWM0_H_
+#define PWM0_H_
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -20,5 +20,7 @@
 
 void initPwm0();
 void setRgbColor(uint16_t red, uint16_t green, uint16_t blue);
+int normalizeRgbColor(int measurement);
+int scaleRgbColor();
 
-#endif /* LED_H_ */
+#endif /* PWM0_H_ */

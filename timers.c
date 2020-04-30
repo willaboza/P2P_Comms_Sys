@@ -57,10 +57,6 @@ void tickIsr()
                 // "Prime the Pump" here
                 if(UART1_FR_R & UART_FR_TXFE)
                 {
-                    // When Checksum set flash RED_LED
-                    TX_FLASH_TIMEOUT = 1000;
-                    setPinValue(RED_LED, 1);
-
                     sprintf(str, "  Transmitting Msg %u, Attempt %u\r\n", table[i].seqId, ++table[i].attempts);
                     sendUart0String(str);
                     sendPacket(messageInProgress);
@@ -74,6 +70,14 @@ void tickIsr()
          if(TX_FLASH_TIMEOUT == 0)
          {
              setPinValue(RED_LED, 0); // Turn LED OFF
+         }
+     }
+    if(RX_FLASH_TIMEOUT > 0)
+     {
+         RX_FLASH_TIMEOUT--;
+         if(RX_FLASH_TIMEOUT == 0)
+         {
+             setPinValue(GREEN_LED, 0); // Turn LED OFF
          }
      }
     TIMER4_ICR_R = TIMER_ICR_TATOCINT;
