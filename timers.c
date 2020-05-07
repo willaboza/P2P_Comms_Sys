@@ -18,6 +18,12 @@
 
 #include "timers.h"
 
+bool invert[NUM_CHANNELS]   = {0};
+bool reload[NUM_CHANNELS]     = {0};
+uint32_t period[NUM_CHANNELS] = {0};
+uint32_t ticks[NUM_CHANNELS]  = {0};
+_callback fn[NUM_CHANNELS]    = {0};
+
 bool TX_FLASH_LED = 0;
 bool RX_FLASH_LED = 0;
 uint32_t TX_FLASH_TIMEOUT = 0;
@@ -26,6 +32,8 @@ uint32_t RX_FLASH_TIMEOUT = 0;
 // Function To Initialize Timers
 void initTimer()
 {
+    int i;
+
     // Enable clocks
     SYSCTL_RCGCTIMER_R |= SYSCTL_RCGCTIMER_R4;
     _delay_cycles(3);
@@ -37,6 +45,14 @@ void initTimer()
     TIMER4_CTL_R   |= TIMER_CTL_TAEN;
     TIMER4_IMR_R   |= TIMER_IMR_TATOIM;                    // enable interrupts
     NVIC_EN2_R     |= 1 << (INT_TIMER4A-80);               // turn-on interrupt 86 (TIMER4A)
+
+    for(i = 0; i < NUM_CHANNELS; i++)
+    {
+        period[i] = 0;
+        ticks[i]  = 0;
+        fn[i]     = 0;
+        reload[i] = false;
+    }
 }
 
 // Function to handle Timer Interrupts
@@ -81,6 +97,21 @@ void tickIsr()
             }
         }
     }
+
+    for(i = 0; i < NUM_CHANNELS; i++)
+    {
+        if(ticks[i] != 0)
+        {
+            ticks[i]--;
+            if(ticks[i] == 0)
+            {
+                if(reload[i])
+                    ticks[i] = period[i];
+                (*fn[i])();
+            }
+        }
+    }
+
     if(TX_FLASH_TIMEOUT > 0)
     {
         TX_FLASH_TIMEOUT--;
@@ -132,6 +163,90 @@ uint32_t calcPower(uint8_t exponent)
         return 1;
     }
 }
+
+// Function to Start One Shot Timer
+bool startOneShotTimer(_callback callback, uint32_t seconds)
+{
+    uint8_t i = 0;
+    bool found = false;
+    while(i < NUM_TIMERS && !found)
+    {
+        found = fn[i] == NULL;
+        if (found)
+        {
+            period[i] = seconds;
+            ticks[i] = seconds;
+            fn[i] = callback;
+            reload[i] = false;
+        }
+        i++;
+    }
+    return found;
+}
+
+// Function to Start Periodic Timer
+bool startPeriodicTimer(_callback callback, uint32_t seconds)
+{
+    uint8_t i = 0;
+    bool found = false;
+    while(i < NUM_TIMERS && !found)
+    {
+        found = fn[i] == NULL;
+        if (found)
+        {
+            period[i] = seconds;
+            ticks[i] = seconds;
+            fn[i] = callback;
+            reload[i] = true;
+        }
+        i++;
+    }
+    return found;
+}
+
+// Channel 1 Pulse callback
+void redLedPulse()
+{
+    PWM0_1_CMPB_R = 0;
+    redLedValue = 0;
+    stopTimer(redLedPulse);
+}
+
+// Channel 2 Pulse callback
+void blueLedPulse()
+{
+    PWM0_2_CMPA_R = 0;
+    blueLedValue  = 0;
+    stopTimer(blueLedPulse);
+}
+
+// Channel 3 Pulse callback
+void greenLedPulse()
+{
+    PWM0_2_CMPB_R = 0;
+    greenLedValue = 0;
+    stopTimer(greenLedPulse);
+}
+
+//
+bool stopTimer(_callback callback)
+{
+    uint8_t i = 0;
+    bool found = false;
+    for(i = 0; i < NUM_CHANNELS; i++)
+    {
+        found = fn[i] == callback;
+        if(found)
+        {
+            period[i] = 0;
+            ticks[i]  = 0;
+            fn[i]     = 0;
+            reload[i] = false;
+        }
+    }
+    return found;
+}
+
 
 // Placeholder random number function
 uint32_t random32()

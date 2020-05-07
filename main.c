@@ -16,16 +16,18 @@
 #include "rs485.h"
 #include "timers.h"
 #include "eeprom.h"
+#include "pwm0.h"
 
 // Function to Initialize Hardware
 void initHw()
 {
     // Configure HW to work with 16 MHz XTAL, PLL enabled, sysdivider of 5, creating system clock of 40 MHz
-    SYSCTL_RCC_R = SYSCTL_RCC_XTAL_16MHZ | SYSCTL_RCC_OSCSRC_MAIN | SYSCTL_RCC_USESYSDIV | (4 << SYSCTL_RCC_SYSDIV_S);
+    SYSCTL_RCC_R = SYSCTL_RCC_XTAL_16MHZ | SYSCTL_RCC_OSCSRC_MAIN | SYSCTL_RCC_USESYSDIV | (4 << SYSCTL_RCC_SYSDIV_S) | SYSCTL_RCC_USEPWMDIV | SYSCTL_RCC_PWMDIV_2;
 
     // Enable clocks
     enablePort(PORTF);
     _delay_cycles(3);
+
 
     // Configure LED and pushbutton pins
     selectPinPushPullOutput(RED_LED);
@@ -42,7 +44,8 @@ int main(void)
     initUart0();
     initUart1();
     initTimer();
-//    initWatchdog();
+    initPwm0();
+    initWatchdog();
 
     // Declare Variables
     USER_DATA userInput;
@@ -57,6 +60,7 @@ int main(void)
     readEepromAddress();
 
     // Seed random variable with current Source Address
+    // srand(SOURCE_ADDRESS);
     srand(SOURCE_ADDRESS);
 
     // Set Variables for User Input to Initial Condition
@@ -69,7 +73,6 @@ int main(void)
     while(true)
     {
         // If User Input detected, then process input
-
         if(kbhitUart0())
         {
             // Get User Input
@@ -78,6 +81,14 @@ int main(void)
             // Tokenize User Input
             parseFields(&userInput);
         }
+
+        /*
+        // If PB pressed broadcast change to other devices
+        if((getPortValue(PORTF) & getPinValue(PUSH_BUTTON)))
+        {
+            sendDataReport(255, 0, 0); // Send value of 0 for PB pressed
+        }
+        */
 
         // Perform Command from User Input
         if(userInput.endOfString && isCommand(&userInput, "reset", 2))
@@ -127,14 +138,14 @@ int main(void)
         }
         else if(userInput.endOfString && isCommand(&userInput, "set", 4))
         {
-            char token[DATA_MAX_SIZE];
-            uint8_t address, channel;
+            uint8_t address, channel, value;
 
             // Get Address, Channel, and Data to be Transmitted
             address = getFieldInteger(&userInput, 1);
             channel = getFieldInteger(&userInput, 2);
-            strcpy(token,getFieldString(&userInput, 3));
-            setACV(address, channel, token);
+            value = getFieldInteger(&userInput, 3);
+
+            setACV(address, channel, value);
 
             resetUserInput(&userInput);
         }
@@ -181,6 +192,18 @@ int main(void)
             }
 
             resetUserInput(&userInput);
+        }
+        else if(userInput.endOfString && isCommand(&userInput, "pulse", 4))
+        {
+            uint8_t address, channel, value;
+            uint16_t duration;
+
+            address = getFieldInteger(&userInput, 1);
+            channel = getFieldInteger(&userInput, 2);
+            value = getFieldInteger(&userInput, 3);
+            duration = getFieldInteger(&userInput, 4);
+
+            // sendPulse(address, channel, value, duration);
         }
         else if(userInput.endOfString && isCommand(&userInput, "print", 1))
         {

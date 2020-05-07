@@ -150,7 +150,8 @@ void setNewAddress(uint8_t oldAddress, uint8_t newAddress)
     table[index].validBit = true;          // Ready to Tx data packet
 }
 
-void sendDataRequest(uint8_t address, uint8_t channel, uint8_t value)
+// Used to send a Data Report to another node
+void sendDataReport(uint8_t address, uint8_t channel, uint8_t value)
 {
     int i;
     uint8_t index;
@@ -210,6 +211,37 @@ void sendReset(uint8_t address)
     table[index].attempts = 0;
     table[index].data[0]  = 0;
     table[index].size     = 0;
+    table[index].phase    = 0;             // Byte to transmit is DST_ADD
+    table[index].backoff  = 1;             // Initial backoff value is zero to Tx ASAP
+    table[index].checksum = 0;
+    table[index].checksum = getChecksum(index); // Perform checksum calculations
+    table[index].validBit = true; // Ready to Tx data packet
+}
+
+// Send Request to Node to Reset Device
+void sendPulse(uint8_t address, uint8_t channel, uint8_t value, uint16_t duration)
+{
+    uint8_t index;
+    char str[50];
+
+    // Find Spot in Pending Table to Queue Message
+    index = messageInProgress = findEmptySlot();
+
+    // Set Sequence ID for Message
+    table[index].seqId = (uint8_t)random32();
+
+    sprintf(str, "  Queuing Msg %u\r\n", table[index].seqId);
+    sendUart0String(str);
+
+    table[index].ackCmd = 0x02; // Reset Command is 0x7Fh
+    addAckFlag(index);
+    table[index].channel  = channel;
+    table[index].dstAdd   = address;
+    table[index].attempts = 0;
+    table[index].data[0]  = value;
+    table[index].data[1]  = duration >> 8;
+    table[index].data[2]  = duration;
+    table[index].size     = 3;
     table[index].phase    = 0;             // Byte to transmit is DST_ADD
     table[index].backoff  = 1;             // Initial backoff value is zero to Tx ASAP
     table[index].checksum = 0;
@@ -283,6 +315,8 @@ void sendPacket(uint8_t index)
 
     size = table[index].size + 6; // Size of data packet
     phase = table[index].phase;   // Store current phase value
+
+    setPinValue(RED_LED, 0);
 
     switch(phase)
     {
@@ -415,11 +449,52 @@ uint8_t getChecksum(uint8_t index)
 }
 
 // Get Current Channel Value
-uint8_t getChannelValue()
+uint8_t getChannelValue(uint8_t channel)
 {
-    uint8_t tmp8 = 0;
+    uint8_t value;
 
-    return tmp8;
+    if(channel == 0)
+    {
+        value = (GPIO_PORTF_DATA_R & PUSH_BUTTON);
+    }
+    else if(channel == 1) // Get Red LED value
+    {
+        value = redLedValue;
+    }
+    else if(channel == 2) // Get Blue LED value
+    {
+        value = blueLedValue;
+    }
+    else if(channel == 3) // Get Green LED value
+    {
+        value = greenLedValue;
+    }
+
+    return value;
+}
+
+// Function sets channel values
+void setChannelValue(uint8_t value)
+{
+    uint16_t scaledValue;
+
+    scaledValue = (uint16_t)(((float)value/255)*1023);
+
+    if(rxInfo.channel == 1) // Set Red LED value
+    {
+        PWM0_1_CMPB_R = scaledValue;
+        redLedValue = value;
+    }
+    else if(rxInfo.channel == 2) //Set Blue LED value
+    {
+        PWM0_2_CMPA_R = scaledValue;
+        blueLedValue = value;
+    }
+    else if(rxInfo.channel == 3) // Set Green LED value
+    {
+        PWM0_2_CMPB_R = scaledValue;
+        greenLedValue = value;
+    }
 }
 
 // If Acknowledge Rx'd and SeqID matches then set valid bit for message to 0
@@ -441,9 +516,11 @@ void ackReceived()
     }
 }
 
+// Function for handling actions of packets received
 void takeAction()
 {
-    uint8_t command, channel, value;
+    uint8_t command, value;
+    uint16_t duration, scaledValue;
     char str[80];
 
     command = (rxInfo.ackCmd & 0x7F); // Mask Bits to remove ACK if set
@@ -452,19 +529,53 @@ void takeAction()
     {
         // Set Command
         case 0x00:
-            sendUart0String("  Set\r\n");
-            channel = rxInfo.channel;
-            value   = rxInfo.data[0]; // DATA argument for set should be size 1
+            value = rxInfo.data[0];
+            // DATA argument for set should be size 1
+            setChannelValue(value);
             break;
 
-        // Pulse Command
-        case 0x20:
-            sendDataRequest(rxInfo.srcAdd, rxInfo.channel, getChannelValue());
+        // Pulse
+        case 0x02:
+            value = rxInfo.data[0];
+            scaledValue = (uint16_t)(((float)value/255)*1023);
+            duration = rxInfo.data[1] << 8;
+            duration = rxInfo.data[2];
+            if(rxInfo.channel == 1)
+            {
+                PWM0_1_CMPB_R = scaledValue;
+                startOneShotTimer(redLedPulse, duration);
+            }
+            else if(rxInfo.channel == 2)
+            {
+                PWM0_2_CMPA_R = scaledValue;
+                startOneShotTimer(blueLedPulse, duration);
+            }
+            else if(rxInfo.channel == 3)
+            {
+                PWM0_2_CMPB_R = scaledValue;
+                startOneShotTimer(greenLedPulse, duration);
+            }
+            break;
+
+        // Square
+        case 0x03:
             break;
 
         // Data Request
+        case 0x20:
+            value = getChannelValue(rxInfo.channel);
+            sendDataReport(rxInfo.srcAdd, rxInfo.channel, value);
+            break;
+
+        // Data Response
         case 0x21:
-            sprintf(str, "  Status = %2u for Channel %2u at Add = %02u\r\n", rxInfo.data[0], rxInfo.channel, rxInfo.dstAdd);
+            sprintf(str, "  Status = %u for Channel %u at Address %u\r\n", rxInfo.data[0], rxInfo.channel, rxInfo.srcAdd);
+            sendUart0String(str);
+            break;
+
+        // R, G, and B PWM values (brightness)
+        case 0x48:
+            sprintf(str, "  ACK Received for Msg %u\r\n", rxInfo.data[0]);
             sendUart0String(str);
             break;
 

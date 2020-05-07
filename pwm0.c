@@ -7,6 +7,10 @@
 
 #include "pwm0.h"
 
+uint8_t redLedValue   = {0};
+uint8_t greenLedValue = {0};
+uint8_t blueLedValue  = {0};
+
 void initPwm0()
 {
     // Enable clocks
@@ -20,13 +24,14 @@ void initPwm0()
     _delay_cycles(3);
 
     // Configure PWM0 pins
-    selectPinPushPullOutput(PWM0_RED_LED);
-    selectPinDigitalInput(PWM0_BLUE_LED);
-    selectPinDigitalInput(PWM0_GREEN_LED);
-/*
-    setPinAuxFunction(PWM0_RED_LED, GPIO_PCTL_PB5_PWM0);
-    setPinAuxFunction(PWM0_BLUE_LED, GPIO_PCTL_PE4_PWM0);
-    setPinAuxFunction(PWM0_GREEN_LED, GPIO_PCTL_PE5_PWM0);
+
+    selectPinOpenDrainOutput(PWM0_RED_LED);
+    selectPinOpenDrainOutput(PWM0_BLUE_LED);
+    selectPinOpenDrainOutput(PWM0_GREEN_LED);
+
+    setPinAuxFunction(PWM0_RED_LED, GPIO_PCTL_PB5_M0PWM3);
+    setPinAuxFunction(PWM0_BLUE_LED, GPIO_PCTL_PE4_M0PWM4);
+    setPinAuxFunction(PWM0_GREEN_LED, GPIO_PCTL_PE5_M0PWM5);
 
     // output 3 on PWM0, gen 1b, cmpb
     PWM0_1_GENB_R = PWM_0_GENB_ACTCMPBD_ZERO | PWM_0_GENB_ACTLOAD_ONE;
@@ -47,7 +52,7 @@ void initPwm0()
     PWM0_1_CTL_R = PWM_0_CTL_ENABLE;                 // turn-on PWM0 generator 1
     PWM0_2_CTL_R = PWM_0_CTL_ENABLE;                 // turn-on PWM0 generator 2
     PWM0_ENABLE_R = PWM_ENABLE_PWM3EN | PWM_ENABLE_PWM4EN | PWM_ENABLE_PWM5EN;// enable outputs
-*/
+
 }
 
 //Set Red,Green,and Blue LED Colors
@@ -58,39 +63,20 @@ void setRgbColor(uint16_t red, uint16_t green, uint16_t blue)
     PWM0_2_CMPB_R = green;    //set value recorded for green
 }
 
-//return measured value in the range of 0... 255 using
-// m = (m/th)*(tMax-tMin), where th = threshold, tMax
-//and tMin is target max and min, and m = measured value
-// Result = ((Input - Input_Low)/(Input_High - Input_Low)) * (Output_High - Output_low) + Output_Low
-int normalizeRgbColor(int measurement)
+// Change value of red LED
+void setRedLed(uint16_t red)
 {
-    uint16_t result;
-    float numerator, denominator, ratio;
-    char str[50];
-
-    sprintf(str, "  %u.0\0", measurement);
-    sendUart0String(str);
-    /*
-    snprintf(buffer, sizeof(buffer), "%u.0\0",measurement);
-    numerator = atof(buffer);
-    snprintf(buffer, sizeof(buffer), "%u.0\0",threshold);
-    denominator = atof(buffer);
-    ratio = (numerator/denominator) * 255.0;
-    result = ratio;
-    */
-    if(result > 255)
-    {
-        result = 255;
-    }
-
-    return result;
+    PWM0_1_CMPB_R = red;      //set value recorded for red
 }
 
-// Result = ((Input - Input_Low)/(Input_High - Input_Low)) *
-// (Output_High - Output_low) + Output_Low
-int scaleRgbColor()
+// Change value of green LED
+void setGreenLed(uint16_t green)
 {
+    PWM0_2_CMPB_R = green;    //set value recorded for green
+}
 
-
-
+// Change value of blue LED
+void setBlueLed(uint16_t blue)
+{
+    PWM0_2_CMPA_R = blue;     //set value recorded for blue
 }

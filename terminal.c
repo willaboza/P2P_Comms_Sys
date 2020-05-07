@@ -171,5 +171,7 @@ void printMainMenu()
     sendUart0String("  sa A Anew\r\n");
     sendUart0String("  ack on\r\n");
     sendUart0String("  ack off\r\n");
+    sendUart0String("  pulse A C V D");
+    // sendUart0String("  square A C V1 V2 T1 T2 CYCLES");
     sendUart0String("\r\n");
 }
