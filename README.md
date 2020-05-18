@@ -8,8 +8,9 @@ Overview
   
 Project Steps
 
-  Step 1:\r\n 
-  \tOn power up toggle on-board green LED on and off
+  Step 1:
+  
+  On power up toggle on-board green LED on and off
   
   Step 2-3:
   Setup UART0 Tx and Rx to interface with a PC through TeraTerm.
