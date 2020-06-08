@@ -22,8 +22,8 @@
   
   6. Build a transmit table for queuing messages to be sent over RS-485. The transmit table contains
      fields for the destination address, sequence number, command, channel, size of data, data, checksum,
-     transmissions to go, and a valid bit. (Note: Set valid bit as true only after all other fields for
-     entry in transmit table have been filled.)
+     transmissions to go, and a valid bit. ***(Note: Set valid bit as true only after all other fields for
+     ***entry in transmit table have been filled.)
   
      For each message to transmit an open row in the transmit table, indicated by a valid bit value of 0,
      will be found and then populated.
