@@ -49,7 +49,7 @@
     
      Once the checksum of a message has been sent, and the transmission attempts remaining field has been decremented (See Step 7 above), the new backoff value needs to be calculated. There are two ways in which the new backoff value is calculated.
      
-       * The first is using a binomial backoff calculated using the formula *backoff = base # + 2<sup>(n-1)<sup>*base #*. Binomial backoff is used when the random transmission command is OFF. An example of the expected backoff values after each attempt, using a base number of 500 ms, is shown in the table below.
+       * The first is using a binomial backoff calculated using the formula *backoff = base # + 2<sup>(n-1)</sup>base #*. Binomial backoff is used when the random transmission command is OFF. An example of the expected backoff values after each attempt, using a base number of 500 ms, is shown in the table below.
   
          | TX Attempt | Backoff Value (s) |
          | :--------: | :---------------: |
@@ -58,7 +58,7 @@
          |      2     |          1.5      |
          |      3     |          2.5      |
   
-       * When the random transmission command is ON then a randomized backoff transmission is calculated using the formula *backoff = base # + rand(2<sup>(n-1)<sup>*base #)*. The random function is first seeded with the device address, which should be unique. An example of the expected backoff values after each attempt, using a base number of 500 ms, is shown in the table below.
+       * When the random transmission command is ON then a randomized backoff transmission is calculated using the formula *backoff = base # + rand(2<sup>(n-1)</sup>base #)*. The random function is first seeded with the device address, which should be unique. An example of the expected backoff values after each attempt, using a base number of 500 ms, is shown in the table below.
 
          | TX Attempt | Backoff Value (s) |
          | :--------: | :---------------: |
@@ -69,4 +69,34 @@
          
      A 1 kHz timer is added to handle the transmission of valid messages, processed in tickIsr, when its backoff equals 0.
 
-9. 
+9. After checksum byte is sent flash the on-board red LED on for a period of time and then turn it off when elapsed.
+
+10. Convert UART1 to 9-bit mode so when it is set the first byte, or destination address, of the message has been received. DE control on the RS-485 will need to be enabled while transmitting the packet and turned off once the last byte, or checksum, has been transmitted.
+
+    UART1's Line Control register has sticky parity and requires:
+        
+       * Setting the PEN when initializing UART1.
+       * When the PEN, EPS, and SPS bits are set the parity bit is transmitted as a 0.
+       * When the PEN and SPS bits are set but the EPS bit is cleared then the parity bit is transmitted as a 1.
+       
+   This is used to synch the receiver.
+   
+11. Receiving of Data.
+
+12. Taking Action After Data is Received.
+
+13. Taking Action when a Data Request Message is Received.
+
+14. Handle Reset Address Command.
+
+15. Poll Requests and Responses.
+
+16. On Receiving a Set Address Command Store New Address in EEPROM.
+
+17. Add Blink Green LED Functionality when TX Data.
+
+18. When a broadcast or unicast message is received with the ACK bit set then an ACK message will be sent back to the source address. 
+
+19. When an ACK message is received take value in data field of packet and compare it with the sequence IDs of those messages in the devices pending table. If a match is found then mark the valid bit for that message as FALSE.
+
+20. If re-transmission time expires then need to re-transmit message, decrement transmission attempts remaining, and calculate next transmission time of message.
