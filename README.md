@@ -43,4 +43,30 @@
      | 6+(n-1) | Data |
      |   6+n   | Checksum |
 
-  8. 
+  8. Add backoff to re-transmissions of messages by adding a field to the pending table to avoid, or spread out, collisions. Backoff for re-transmissions is in units of milliseconds (BACKOFF = 0 means the message can be sent).
+  
+     If valid bit for message in pending table is TRUE and the backoff value is 0 this indicates that the message in the pending table is ready for transmission. 
+    
+     Once the checksum of a message has been sent, and the transmission attempts remaining field has been decremented (See Step 7 above), the new backoff value needs to be calculated. There are two ways in which the new backoff value is calculated.
+     
+       * The first is using a binomial backoff calculated using the formula *backoff = base # + 2<sup>(n-1)<sup>*base #*. Binomial backoff is used when the random transmission command is OFF. An example of the expected backoff values after each attempt, using a base number of 500 ms, is shown in the table below.
+  
+         | TX Attempt | Backoff Value (s) |
+         | :--------: | :---------------: |
+         |      0     |          0        |
+         |      1     |          1        |
+         |      2     |          1.5      |
+         |      3     |          2.5      |
+  
+       * When the random transmission command is ON then a randomized backoff transmission is calculated using the formula *backoff = base # + rand(2<sup>(n-1)<sup>*base #)*. The random function is first seeded with the device address, which should be unique. An example of the expected backoff values after each attempt, using a base number of 500 ms, is shown in the table below.
+
+         | TX Attempt | Backoff Value (s) |
+         | :--------: | :---------------: |
+         |      0     |     0 to 1        |
+         |      1     |     0.5 to 1      |
+         |      2     |     0.5 to 2.5    |
+         |      3     |     0.5 to 4.5    |
+         
+     A 1 kHz timer is added to handle the transmission of valid messages, processed in tickIsr, when its backoff equals 0.
+
+9. 
