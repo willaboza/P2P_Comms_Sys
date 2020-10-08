@@ -62,6 +62,8 @@ int main(void)
     // Seed random variable with current Source Address
     // srand(SOURCE_ADDRESS);
     srand(SOURCE_ADDRESS);
+    setPinValue(GREEN_LED, 1);
+
 
     // Set Variables for User Input to Initial Condition
     resetUserInput(&userInput);
@@ -69,7 +71,7 @@ int main(void)
     // Display Main Menu
     putsUart0("\r\n");
     printMainMenu();
-
+    setPinValue(GREEN_LED, 0);
     while(true)
     {
         // If User Input detected, then process input

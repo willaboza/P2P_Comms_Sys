@@ -78,7 +78,7 @@ void putsUart0(char* str)
 }
 
 // Blocking function that returns with serial data once the buffer is not empty
-char getcUart0()
+char getsUart0()
 {
     return UART0_DR_R & 0xFF;                        // get character from fifo
 }
