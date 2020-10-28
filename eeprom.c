@@ -1,15 +1,24 @@
-/*
- * eeprom.c
- *
- *  Created on: Apr 7, 2020
- *      Author: Jason Losh
- */
+// eeprom.c
+// William Bozarth
+// Created on: April 7, 2020
 
+//-----------------------------------------------------------------------------
+// Hardware Target
+//-----------------------------------------------------------------------------
 
+// Target Platform: EK-TM4C123GXL Evaluation Board
+// Target uC:       TM4C123GH6PM
+// System Clock:    40 MHz
+
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include "tm4c123gh6pm.h"
 #include "eeprom.h"
+#include "rs485.h"
 
 // Function to initialize EEPROM
-void initEeprom()
+void initEeprom(void)
 {
     SYSCTL_RCGCEEPROM_R = 1;
     _delay_cycles(6);
@@ -34,7 +43,7 @@ uint32_t readEeprom(uint16_t add)
 }
 
 // Function to Retrieve Current Address for Device
-void readEepromAddress()
+void readEepromAddress(void)
 {
     uint32_t num = 0;
     if((num = readEeprom(0x0000)) != 0xFFFFFFFF)

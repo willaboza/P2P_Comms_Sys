@@ -13,11 +13,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-#include "uart0.h"
+#include "stdlib.h"
 #include "tm4c123gh6pm.h"
+#include "timers.h"
 #include "uart0.h"
 #include "gpio.h"
 #include "rs485.h"
+#include "pwm0.h"
 
 #define NUM_TIMERS 10
 #define NUM_CHANNELS 5
@@ -33,16 +35,16 @@ extern uint32_t ticks[NUM_CHANNELS];
 extern bool reload[NUM_CHANNELS];
 extern bool invert[NUM_CHANNELS];
 
-void initTimer();
-void tickIsr();
+void initTimer(void);
+void tickIsr(void);
 uint32_t calcNewBackoff(uint8_t exponent);
 uint32_t calcPower(uint8_t exponent);
-uint32_t random32();
+uint32_t random32(void);
 bool startOneShotTimer(_callback callback, uint32_t seconds);
 bool startPeriodicTimer(_callback callback, uint32_t seconds);
 bool stopTimer(_callback callback);
-void redLedPulse();
-void blueLedPulse();
-void greenLedPulse();
+void redLedPulse(void);
+void blueLedPulse(void);
+void greenLedPulse(void);
 
 #endif /* TIMERS_H_ */
