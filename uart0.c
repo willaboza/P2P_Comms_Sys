@@ -1,34 +1,26 @@
-// UART0 Library
-// Jason Losh
+// uart0.c
+// William Bozarth
+// Created on: October 7, 2020
 
 //-----------------------------------------------------------------------------
 // Hardware Target
 //-----------------------------------------------------------------------------
 
-// Target Platform: EK-TM4C123GXL
+// Target Platform: EK-TM4C123GXL Evaluation Board
 // Target uC:       TM4C123GH6PM
-// System Clock:    -
+// System Clock:    40 MHz
 
-// Hardware configuration:
-// UART Interface:
-//   U0TX (PA1) and U0RX (PA0) are connected to the micro-controller
-
-//-----------------------------------------------------------------------------
-// Device includes, defines, and assembler directives
-//-----------------------------------------------------------------------------
-
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+#include "tm4c123gh6pm.h"
+#include "gpio.h"
 #include "uart0.h"
 
-char uart0String[QUEUE_BUFFER_LENGTH] = {0};
-uint8_t writeIndex = 0;
-uint8_t readIndex = 0;
-
-//-----------------------------------------------------------------------------
-// Subroutines
-//-----------------------------------------------------------------------------
+UART0_BUFFER uart0Info = {0};
 
 // Initialize UART0
-void initUart0()
+void initUart0(void)
 {
     // Enable clocks
     SYSCTL_RCGCUART_R |= SYSCTL_RCGCUART_R0;
@@ -58,38 +50,49 @@ void setUart0BaudRate(uint32_t baudRate, uint32_t fcyc)
     UART0_FBRD_R = ((divisorTimes128 + 1) >> 1) & 63;   // set fractional value to round(fract(r)*64)
     UART0_LCRH_R = UART_LCRH_WLEN_8;                    // configure for 8N1 w/ 16-level FIFO
     UART0_CTL_R  = UART_CTL_TXE | UART_CTL_RXE | UART_CTL_UARTEN; // turn-on UART0
-    UART0_IM_R = UART_IM_TXIM;                          // turn-on TX interrupt
-    NVIC_EN0_R |= 1 << (INT_UART0-16);                  // turn-on interrupt 21 (UART0)
+    UART0_IM_R   = UART_IM_TXIM;                        // turn-on TX interrupt
+    NVIC_EN0_R   |= 1 << (INT_UART0-16);                // turn-on interrupt 21 (UART0)
 }
 
-// Blocking function that writes a serial character when the UART buffer is not full
-void putcUart0(char c)
-{
-    while (UART0_FR_R & UART_FR_TXFF); // wait if uart0 tx fifo full
-    UART0_DR_R = c;                    // write character to fifo
-}
-
-// Blocking function that writes a string when the UART buffer is not full
-void putsUart0(char* str)
-{
-    uint8_t i = 0;
-    while (str[i] != '\0')
-        putcUart0(str[i++]);
-}
-
-// Blocking function that returns with serial data once the buffer is not empty
-char getcUart0()
-{
-    return UART0_DR_R & 0xFF;                        // get character from fifo
-}
 
 // Returns the status of the receive buffer
-bool kbhitUart0()
+bool kbhitUart0(void)
 {
     return !(UART0_FR_R & UART_FR_RXFE);
 }
 
+// Blocking function that returns with serial data once the buffer is not empty
+char getcUart0(void)
+{
+    return UART0_DR_R & 0xFF; // get character from fifo
+}
+
+// Add characters to UART0 TX FIFO
 void sendUart0String(char str[])
+{
+    int i = 0;
+
+    // Write string to Tx Ring Buffer
+    while(str[i] != '\0')
+    {
+        // If NOT full write next Character
+        if(!(fullRingBuffer()))
+        {
+            writeToQueue(str[i]);
+            i++;
+        }
+    }
+
+    UART0_ICR_R = 0x00000FFF;
+    // Check to see if UART Tx holding register is empty
+    if(UART0_FR_R & UART_FR_TXFE  && !(emptyRingBuffer()))
+    {
+        UART0_DR_R = readFromQueue(); // "Prime Pump" by writing 1st char to Uart0
+    }
+}
+
+// Add characters to UART0 TX FIFO
+void sendUart0StringLiteral(const char str[])
 {
     int i = 0;
 
@@ -115,25 +118,25 @@ void sendUart0String(char str[])
 // Update current position of writeIndex variable for Ring Buffer
 void writeToQueue(char c)
 {
-    uart0String[writeIndex] = c;
-    writeIndex = (writeIndex + 1) % QUEUE_BUFFER_LENGTH;
+    uart0Info.uart0String[uart0Info.writeIndex] = c;
+    uart0Info.writeIndex = (uart0Info.writeIndex + 1) % QUEUE_BUFFER_LENGTH;
 }
 
 // Update current position of readIndex variable for Ring Buffer
-char readFromQueue()
+char readFromQueue(void)
 {
     char c;
-    c = uart0String[readIndex];
-    readIndex = (readIndex + 1) % QUEUE_BUFFER_LENGTH;
+    c = uart0Info.uart0String[uart0Info.readIndex];
+    uart0Info.readIndex = (uart0Info.readIndex + 1) % QUEUE_BUFFER_LENGTH;
     return c;
 }
 
 // Returns true if ring buffer is EMPTY
-bool emptyRingBuffer()
+bool emptyRingBuffer(void)
 {
     bool ok = false;
 
-    if(writeIndex == readIndex)
+    if(uart0Info.writeIndex == uart0Info.readIndex)
     {
         ok = true;
     }
@@ -142,11 +145,11 @@ bool emptyRingBuffer()
 }
 
 // Returns true if ring buffer is FULL
-bool fullRingBuffer()
+bool fullRingBuffer(void)
 {
     bool ok = false;
 
-    if(((writeIndex + 1) % QUEUE_BUFFER_LENGTH) == readIndex)
+    if(((uart0Info.writeIndex + 1) % QUEUE_BUFFER_LENGTH) == uart0Info.readIndex)
     {
         ok = true;
     }
@@ -154,11 +157,29 @@ bool fullRingBuffer()
     return ok;
 }
 
+// Prints contents of main menu
+void printMainMenu(void)
+{
+    sendUart0String("Commands:\r\n");
+    sendUart0String("  reset A\r\n");
+    sendUart0String("  random ON|OFF\r\n");
+    sendUart0String("  set A C V\r\n");
+    sendUart0String("  get A C\r\n");
+    sendUart0String("  poll\r\n");
+    sendUart0String("  sa A Anew\r\n");
+    sendUart0String("  ack on\r\n");
+    sendUart0String("  ack off\r\n");
+    sendUart0String("  pulse A C V D\r\n");
+    sendUart0String("  square A C V1 V2 T1 T2 CYCLES\r\n");
+    sendUart0String("\r\n");
+}
+
 // Handle UART0 Interrupts
-void uart0Isr()
+void uart0Isr(void)
 {
     // Writing a 1 to the bits in this register clears the bits in the UARTRIS and UARTMIS registers
     UART0_ICR_R = 0xFFF;
+
     // Check to see if UART Tx holding register is empty and send next byte of data
     if((UART0_FR_R & UART_FR_TXFE) && !(emptyRingBuffer()))
     {

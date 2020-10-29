@@ -1,12 +1,3 @@
-/*
- * wait.c
- *
- *  Created on: Feb 24, 2020
- *      Author: willi
- */
-
-#include "reboot.h"
-
 // Watchdog Example
 // Jason Losh
 

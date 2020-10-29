@@ -24,8 +24,8 @@
 extern uint16_t rxPhase;
 
 void initUart1();
-void setUart1BaudRate(uint32_t baudRate, uint32_t fcyc);
 void uart1Isr();
 void processRxPacket(uint8_t data);
+void setUart1BaudRate(uint32_t baudRate, uint32_t fcyc);
 
 #endif /* UART1_H_ */

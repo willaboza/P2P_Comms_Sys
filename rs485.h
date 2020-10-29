@@ -1,31 +1,25 @@
-/*
- * rs485.h
- *
- *  Created on: Mar 26, 2020
- *      Author: willi
- */
+// rs485.h
+// William Bozarth
+// Created on: March 26, 2020
+
+//-----------------------------------------------------------------------------
+// Hardware Target
+//-----------------------------------------------------------------------------
+
+// Target Platform: EK-TM4C123GXL Evaluation Board
+// Target uC:       TM4C123GH6PM
+// System Clock:    40 MHz
 
 #ifndef RS485_H_
 #define RS485_H_
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include "tm4c123gh6pm.h"
-#include "gpio.h"
-#include "uart0.h"
-#include "uart1.h"
-#include "timers.h"
-#include "eeprom.h"
-#include "reboot.h"
-#include "pwm0.h"
+#include "stdbool.h"
+#include "rs485.h"
 
 // Pins
-#define RED_LED PORTF,     1
-#define BLUE_LED PORTF,    2
-#define GREEN_LED PORTF,   3
+#define RED_LED     PORTF, 1
+#define BLUE_LED    PORTF, 2
+#define GREEN_LED   PORTF, 3
 #define PUSH_BUTTON PORTF, 4
 
 #define MAX_PACKET_SIZE 263
@@ -73,23 +67,23 @@ extern uint8_t messageInProgress;
 extern uint8_t sum;
 extern bool GREEN_LED_FLASH;
 
-void getNextSeqID();
-void addAckFlag(uint8_t index);
+void getNextSeqID(void);
+void setAckFlag(uint8_t index);
 void setACV(uint8_t address, uint8_t channel, uint8_t value);
 void getAC(uint8_t address, uint8_t channel);
-void poll();
+void poll(void);
 void setNewAddress(uint8_t oldAddress, uint8_t newAddress);
 void sendDataReport(uint8_t address, uint8_t channel, uint8_t value);
 void sendPulse(uint8_t address, uint8_t channel, uint8_t value, uint16_t duration);
 void sendReset(uint8_t address);
 void sendAcknowledge(uint8_t address, uint8_t id);
 void sendPollResponse(uint8_t address);
-void sumWords();
+void sumWords(void);
 void sendPacket(uint8_t index);
-void displayTableContents();
+void displayTableContents(void);
 uint8_t getChecksum(uint8_t index);
-uint8_t findEmptySlot();
-void takeAction();
-void ackReceived();
+uint8_t findEmptySlot(void);
+void takeAction(void);
+void ackReceived(void);
 
 #endif /* RS485_H_ */
